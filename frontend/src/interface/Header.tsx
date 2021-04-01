@@ -10,7 +10,6 @@ export const Header: FC = () => {
     return (
         <div
             css={css`
-                left: 0;
                 top: 0;
                 position: fixed;
                 padding: 7px 50px;
