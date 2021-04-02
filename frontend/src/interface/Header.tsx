@@ -10,11 +10,9 @@ export const Header: FC = () => {
     return (
         <div
             css={css`
-                top: 0;
-                position: fixed;
                 padding: 7px 50px;
                 width: 100%;
-                background-color: #24292e;
+                background-color: #222222;
             `}
         >
             <A href="/">
