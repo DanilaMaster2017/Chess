@@ -20,6 +20,7 @@ export const Button: FC = ({ children }) => {
                     box-shadow: none;
                     color: white;
                     background-color: #eaa77f;
+                    cursor: pointer;
                 }
                 &:active {
                     background-color: orange;
