@@ -3,15 +3,16 @@
 import { css, jsx } from '@emotion/react';
 import { FC } from 'react';
 
-export const Page: FC = ({ children }) => {
+export const Td: FC = ({ children }) => {
     return (
-        <div
+        <td
             css={css`
-                flex: 1 1 auto;
-                width: 100%;
+                display: inline-block;
+                width: 33.333%;
+                padding: 3px 10px;
             `}
         >
             {children}
-        </div>
+        </td>
     );
 };

@@ -31,3 +31,10 @@ html {
 #root {
     height: 100%;
 }
+
+table.waitingRoom thead,
+table.waitingRoom tbody,
+table.waitingRoom tr {
+    display: block;
+    width: 100%;
+}

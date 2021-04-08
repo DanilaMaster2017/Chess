@@ -12,7 +12,6 @@ export const LeftPanel: FC = () => {
                 flex-direction: column;
                 justify-content: center;
                 padding: 15px;
-                height: 100%;
                 background-color: white;
             `}
         >
