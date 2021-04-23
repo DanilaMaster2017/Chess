@@ -18,7 +18,7 @@ export const Header: FC = () => {
             <A href="/">
                 <div
                     css={css`
-                        display: flex;
+                        display: inline-flex;
                         justify-content: flex-start;
                         align-items: center;
                     `}
@@ -28,7 +28,7 @@ export const Header: FC = () => {
                             border-radius: 5px;
                             width: ${imgSize};
                             height: ${imgSize};
-                            margin: 0 10px;
+                            margin: 0 10px 0 0;
                         `}
                         src={chessImage}
                         alt="chess"
