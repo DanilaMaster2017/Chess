@@ -52,22 +52,11 @@ export const WaitingRoom: FC = () => {
                 </tr>
             </thead>
             <tbody
+                className="scrollableComponent"
                 css={css`
                     flex: 1 1 auto;
                     height: 250px;
                     overflow-y: auto;
-                    &::-webkit-scrollbar {
-                        width: 8px;
-                    }
-                    &::-webkit-scrollbar-button {
-                        display: none;
-                    }
-                    &::-webkit-scrollbar-thumb {
-                        background-color: #d2d2d2;
-                        &:hover {
-                            background-color: #b3b3b3;
-                        }
-                    }
                 `}
             >
                 {data.map((gameRequest, i) => {

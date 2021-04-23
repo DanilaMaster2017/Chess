@@ -26,7 +26,6 @@ body,
 html {
     height: 100%;
     background-color: #edeef0;
-    overflow: hidden;
 }
 #root {
     height: 100%;
@@ -37,4 +36,18 @@ table.waitingRoom tbody,
 table.waitingRoom tr {
     display: block;
     width: 100%;
+}
+
+.scrollableComponent::-webkit-scrollbar {
+    width: 8px;
+}
+
+.scrollableComponent::-webkit-scrollbar-button {
+    display: none;
+}
+.scrollableComponent::-webkit-scrollbar-thumb {
+    background-color: #d2d2d2;
+}
+.scrollableComponent::-webkit-scrollbar-thumb:hover {
+    background-color: #b3b3b3;
 }
