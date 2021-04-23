@@ -4,6 +4,7 @@ import { jsx, css } from '@emotion/react';
 import { BrowserRouter, Route, Switch } from 'react-router-dom';
 import { Header } from './interface/Header';
 import { StartPage } from './interface/StartPage';
+import { GameSettingsContext } from './interface/GameSettingsContext';
 
 function App() {
     return (
@@ -19,7 +20,9 @@ function App() {
             >
                 <Header></Header>
                 <Switch>
-                    <Route exact path="/" component={StartPage}></Route>
+                    <GameSettingsContext>
+                        <Route exact path="/" component={StartPage}></Route>
+                    </GameSettingsContext>
                 </Switch>
             </div>
         </BrowserRouter>

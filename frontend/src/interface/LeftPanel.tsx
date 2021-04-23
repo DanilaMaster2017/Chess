@@ -3,8 +3,12 @@
 import { css, jsx } from '@emotion/react';
 import { FC } from 'react';
 import { Button } from './Button';
+import { useDialogContext } from './DialogContext';
+import { playComputer, playFriend, playMan } from '../constants/constants';
 
 export const LeftPanel: FC = () => {
+    const { onPlayMan, onPlayFriend, onPlayComputer } = useDialogContext();
+
     return (
         <div
             css={css`
@@ -15,9 +19,9 @@ export const LeftPanel: FC = () => {
                 background-color: white;
             `}
         >
-            <Button>создать игру</Button>
-            <Button>сыграть с другом</Button>
-            <Button>сыграть с компьютером</Button>
+            <Button onClick={onPlayMan}>{playMan}</Button>
+            <Button onClick={onPlayFriend}>{playFriend}</Button>
+            <Button onClick={onPlayComputer}>{playComputer}</Button>
         </div>
     );
 };
