@@ -10,6 +10,9 @@ export const Header: FC = () => {
     return (
         <div
             css={css`
+                position: sticky;
+                z-index: 9999;
+                top: 0;
                 padding: 7px 50px;
                 width: 100%;
                 background-color: #222222;

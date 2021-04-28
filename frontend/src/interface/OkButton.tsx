@@ -3,9 +3,14 @@
 import { css, jsx } from '@emotion/react';
 import { FC } from 'react';
 
-export const OkButton: FC = ({ children }) => {
+interface Props {
+    onClick: () => void;
+}
+
+export const OkButton: FC<Props> = ({ children, onClick }) => {
     return (
         <button
+            onClick={onClick}
             css={css`
                 position: relative;
                 font-family: 'Roboto', sans-serif;

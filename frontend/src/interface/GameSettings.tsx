@@ -2,6 +2,7 @@
 /** @jsx jsx */
 import { css, jsx } from '@emotion/react';
 import { FC, useRef, useEffect } from 'react';
+import { useHistory } from 'react-router-dom';
 import { useDialogContext } from './DialogContext';
 import { CloseButton } from './CloseButton';
 import { playComputer, playFriend, playMan } from '../constants/constants';
@@ -15,6 +16,7 @@ import dialogPolyfill from 'dialog-polyfill';
 export const GameSettings: FC = () => {
     const gameSettingsDialog = useRef<HTMLDialogElement>(null);
     const { gameMode, onClose } = useDialogContext();
+    const history = useHistory();
 
     const getTitle = (gameMode: 'computer' | 'friend' | 'man' | 'close') => {
         switch (gameMode) {
@@ -25,6 +27,10 @@ export const GameSettings: FC = () => {
             case 'computer':
                 return playComputer;
         }
+    };
+
+    const onClick = () => {
+        history.push('/computer-game');
     };
 
     function onDialogClick(e: any) {
@@ -108,7 +114,7 @@ export const GameSettings: FC = () => {
                 <TimeSettings></TimeSettings>
                 {gameMode === 'computer' && <LevelSettings></LevelSettings>}
                 <ColorSettings></ColorSettings>
-                <OkButton>
+                <OkButton onClick={onClick}>
                     {gameMode === 'computer' ? 'Начать игру!' : 'Создать игру!'}
                 </OkButton>
             </div>
