@@ -1,14 +1,64 @@
 /** @jsxRuntime classic */
 /** @jsx jsx */
 import { css, jsx } from '@emotion/react';
-import { FC, useState } from 'react';
+import { FC, useState, useEffect } from 'react';
 import { ChessBoard } from './ChessBoard';
-import { InfoPanel } from './InfoPanel';
+import { InfoBlock } from './InfoBlock';
 import { Page } from './Page';
 import { getInitialPosition, Position } from '../сhessEngine/chessEngine';
+import { useInfoContext } from './InfoContext';
+import { useGameSettingsContext } from './GameSettingsContext';
+import { timesForGame } from '.././constants/constants';
 
 export const ComputerGamePage: FC = () => {
     const [position, setPosition] = useState<Position>(getInitialPosition());
+
+    const { color, level, timeForGame } = useGameSettingsContext();
+    const {
+        playerInfo,
+        setPlayerInfo,
+        setEnemyInfo,
+        setPlayerTimeLeft,
+        setEnemyTimeLeft,
+        setWhoseMove,
+    } = useInfoContext();
+
+    useEffect(() => {
+        let playerColor: 'white' | 'black';
+
+        if (color === 'random') {
+            playerColor = Math.random() < 0.5 ? 'white' : 'black';
+        } else {
+            playerColor = color;
+        }
+
+        const enemyColor: 'white' | 'black' =
+            playerColor === 'white' ? 'black' : 'white';
+
+        playerColor === 'white'
+            ? setWhoseMove('player')
+            : setWhoseMove('enemy');
+
+        setPlayerInfo({
+            color: playerColor,
+            name: 'Аноним',
+        });
+        setEnemyInfo({
+            color: enemyColor,
+            name: 'Компьютер',
+            computerLevel: level,
+        });
+
+        if (timeForGame) {
+            const timeLeft = new Date(0, 0);
+
+            timeLeft.setSeconds(60 * timesForGame[timeForGame]);
+
+            setPlayerTimeLeft(timeLeft);
+            setEnemyTimeLeft(timeLeft);
+        }
+    }, []);
+
     return (
         <Page>
             <div
@@ -27,10 +77,10 @@ export const ComputerGamePage: FC = () => {
                 >
                     <ChessBoard
                         position={position}
-                        gamerColor="black"
+                        gamerColor={playerInfo.color}
                     ></ChessBoard>
                 </div>
-                <InfoPanel></InfoPanel>
+                <InfoBlock></InfoBlock>
             </div>
         </Page>
     );

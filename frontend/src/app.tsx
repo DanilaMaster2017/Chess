@@ -6,6 +6,7 @@ import { Header } from './interface/Header';
 import { StartPage } from './interface/StartPage';
 import { GameSettingsContext } from './interface/GameSettingsContext';
 import { ComputerGamePage } from './interface/ComputerGamePage';
+import { InfoContext } from './interface/InfoContext';
 
 function App() {
     return (
@@ -23,10 +24,12 @@ function App() {
                 <Switch>
                     <GameSettingsContext>
                         <Route exact path="/" component={StartPage}></Route>
-                        <Route
-                            path="/computer-game"
-                            component={ComputerGamePage}
-                        ></Route>
+                        <InfoContext>
+                            <Route
+                                path="/computer-game"
+                                component={ComputerGamePage}
+                            ></Route>
+                        </InfoContext>
                     </GameSettingsContext>
                 </Switch>
             </div>

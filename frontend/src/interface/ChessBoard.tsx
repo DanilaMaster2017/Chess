@@ -1,8 +1,9 @@
 /** @jsxRuntime classic */
 /** @jsx jsx */
 import { css, jsx } from '@emotion/react';
-import { FC } from 'react';
+import { FC, useEffect } from 'react';
 import { Cell } from './Cell';
+import { useInfoContext } from './InfoContext';
 import { Position } from '../сhessEngine/chessEngine';
 import whitePawn from '../images/chessPieces/wp.svg';
 import whiteRook from '../images/chessPieces/wr.svg';
@@ -46,16 +47,32 @@ const getPieceFromPosition = (
     return undefined;
 };
 
-const generateCells = (color: 'white' | 'black', position: Position) => {
+const generateCells = (
+    position: Position,
+    color: 'white' | 'black',
+    isReverse: boolean
+) => {
     const cells = [];
     const boardSize = letters.length - 1;
 
-    const start: number = color === 'black' ? 0 : boardSize;
-    const end: number = color === 'black' ? boardSize : 0;
-    const increment: number = color === 'black' ? 1 : -1;
+    let start: number;
+    let end: number;
+    let increment: number;
+    let cellBitboard: long;
 
-    let cellBitboard: long =
-        color === 'black' ? long.ONE.shiftLeft(63) : long.ONE;
+    if ((color === 'black' && !isReverse) || (color === 'white' && isReverse)) {
+        start = 0;
+        end = boardSize;
+        increment = 1;
+
+        cellBitboard = long.ONE.shiftLeft(63);
+    } else {
+        start = boardSize;
+        end = 0;
+        increment = -1;
+
+        cellBitboard = long.ONE;
+    }
 
     for (let i = start; i !== end + increment; i += increment) {
         for (let j = start; j !== end + increment; j += increment) {
@@ -70,7 +87,10 @@ const generateCells = (color: 'white' | 'black', position: Position) => {
                 ></Cell>
             );
 
-            if (color === 'black') {
+            if (
+                (color === 'black' && !isReverse) ||
+                (color === 'white' && isReverse)
+            ) {
                 cellBitboard = cellBitboard.shiftRightUnsigned(1);
             } else {
                 cellBitboard = cellBitboard.shiftLeft(1);
@@ -82,6 +102,20 @@ const generateCells = (color: 'white' | 'black', position: Position) => {
 };
 
 export const ChessBoard: FC<Props> = ({ gamerColor, position }) => {
+    const { isReverse, setEnemyTakenPieces } = useInfoContext();
+
+    useEffect(() => {
+        setEnemyTakenPieces(
+            new Map([
+                [whitePawn, 1],
+                [whiteRook, 2],
+                [whiteBishop, 2],
+                [whiteKnight, 1],
+                [whiteQueen, 1],
+            ])
+        );
+    }, []);
+
     return (
         <div
             css={css`
@@ -92,7 +126,7 @@ export const ChessBoard: FC<Props> = ({ gamerColor, position }) => {
                 box-shadow: 2px 2px 6px rgba(0, 0, 0, 0.4);
             `}
         >
-            {generateCells(gamerColor, position)}
+            {generateCells(position, gamerColor, isReverse)}
         </div>
     );
 };
