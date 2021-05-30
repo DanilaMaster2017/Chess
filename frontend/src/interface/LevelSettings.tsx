@@ -6,10 +6,13 @@ import { LevelButton } from './LevelButton';
 
 const generateLevelButtons = () => {
     const numberOfLevels: number = 8;
+    const sartLevel: number = 1;
     const buttons = [];
-    for (let i: number = 0; i < numberOfLevels; i++) {
+
+    for (let i: number = sartLevel; i <= numberOfLevels; i++) {
         buttons.push(<LevelButton key={i} value={i}></LevelButton>);
     }
+
     return buttons;
 };
 

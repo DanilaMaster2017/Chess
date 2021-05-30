@@ -34,7 +34,7 @@ export const LevelButton: FC<Props> = ({ value }) => {
                 ${level === value ? activeStyle : defaultStyle}
             `}
         >
-            {value + 1}
+            {value}
         </button>
     );
 };

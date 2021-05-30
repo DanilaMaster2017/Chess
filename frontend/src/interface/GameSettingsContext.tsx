@@ -12,7 +12,7 @@ interface IGameSettingsContext {
 }
 
 const defaultColor = 'random';
-const defaultLevel = 0;
+const defaultLevel = 1;
 const defaultTimeForGame = 0;
 const defaultTimeForMove = 0;
 
