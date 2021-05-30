@@ -86,7 +86,6 @@ export const GameSettings: FC = () => {
             css={css`
                 margin: auto;
                 background-color: white;
-                font-family: 'Roboto', sans-serif;
                 &::backdrop {
                     background-color: rgba(0, 0, 0, 0.6);
                 }

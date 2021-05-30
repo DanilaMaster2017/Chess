@@ -40,7 +40,6 @@ export const WaitingRoom: FC = () => {
                 border-collapse: collapse;
                 background-color: transparent;
                 color: #4d4d4d;
-                font-family: 'Roboto', sans-serif;
                 font-size: 14px;
             `}
         >

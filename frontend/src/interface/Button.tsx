@@ -13,7 +13,6 @@ export const Button: FC<Props> = ({ onClick, children }) => {
             onClick={onClick}
             css={css`
                 position: relative;
-                font-family: 'Roboto', sans-serif;
                 border: 1px solid black;
                 box-shadow: 2px 2px 3px rgba(0, 0, 0, 0.5);
                 margin: 20px 0;

@@ -40,6 +40,7 @@ export const Header: FC = () => {
                         css={css`
                             color: white;
                             font-size: 30px;
+                            font-family: 'Times New Roman', Times, serif;
                             &::first-letter {
                                 color: #f37021;
                                 font-size: 44px;

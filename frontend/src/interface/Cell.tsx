@@ -19,7 +19,6 @@ export const Cell: FC<Props> = ({ piece, x, y, letter, digit }) => {
         <div
             css={css`
                 cursor: pointer;
-                font-family: 'Roboto', sans-serif;
                 font-size: 11px;
                 position: relative;
                 width: 12.5%;
