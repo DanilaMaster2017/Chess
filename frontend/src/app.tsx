@@ -7,6 +7,7 @@ import { StartPage } from './interface/StartPage';
 import { GameSettingsContext } from './interface/GameSettingsContext';
 import { ComputerGamePage } from './interface/ComputerGamePage';
 import { InfoContext } from './interface/InfoContext';
+import { NotFoundPage } from './interface/NotFoundPage';
 
 function App() {
     return (
@@ -21,17 +22,20 @@ function App() {
                 `}
             >
                 <Header></Header>
-                <Switch>
-                    <GameSettingsContext>
+                <GameSettingsContext>
+                    <Switch>
                         <Route exact path="/" component={StartPage}></Route>
-                        <InfoContext>
-                            <Route
-                                path="/computer-game"
-                                component={ComputerGamePage}
-                            ></Route>
-                        </InfoContext>
-                    </GameSettingsContext>
-                </Switch>
+                        <Route
+                            path="/computer-game"
+                            component={ComputerGamePage}
+                        >
+                            <InfoContext>
+                                <ComputerGamePage></ComputerGamePage>
+                            </InfoContext>
+                        </Route>
+                        <Route component={NotFoundPage}></Route>
+                    </Switch>
+                </GameSettingsContext>
             </div>
         </BrowserRouter>
     );
