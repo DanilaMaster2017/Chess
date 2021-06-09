@@ -1,7 +1,7 @@
 /** @jsxRuntime classic */
 /** @jsx jsx */
 import { css, jsx } from '@emotion/react';
-import { FC, useRef, useEffect } from 'react';
+import { FC, useRef, useEffect, useState } from 'react';
 import { useHistory } from 'react-router-dom';
 import { useDialogContext } from './DialogContext';
 import { CloseButton } from './CloseButton';
@@ -12,9 +12,19 @@ import { LevelSettings } from './LevelSettings';
 import { ColorSettings } from './ColorSettings';
 import { OkButton } from './OkButton';
 import dialogPolyfill from 'dialog-polyfill';
+import ReactLoading from 'react-loading';
+import { useGameRequestContext } from './GameRequestContext';
+import { useGameSettingsContext } from './GameSettingsContext';
+import {
+    createGameRequest,
+    changeGameRequest,
+} from '../requestsToServer/requests';
 
 export const GameSettings: FC = () => {
     const gameSettingsDialog = useRef<HTMLDialogElement>(null);
+    const [isLoading, setIsLoading] = useState<boolean>(false);
+    const { gameRequests, setGameRequests } = useGameRequestContext();
+    const { getTimeForGame, getTimeForMove, color } = useGameSettingsContext();
     const { gameMode, onClose } = useDialogContext();
     const history = useHistory();
 
@@ -29,8 +39,38 @@ export const GameSettings: FC = () => {
         }
     };
 
-    const onClick = () => {
-        history.push('/computer-game');
+    const onClick = async () => {
+        if (gameMode === 'man') {
+            if (gameRequests.length && gameRequests[0].status === 'canceled')
+                return;
+
+            setIsLoading(true);
+
+            if (!gameRequests.length || gameRequests[0].status === 'default') {
+                const gameRequest = await createGameRequest({
+                    playerName: 'Аноним',
+                    color: color,
+                    timeForGame: getTimeForGame(),
+                    timeForMove: getTimeForMove(),
+                });
+
+                setGameRequests([gameRequest, ...gameRequests]);
+            } else if (gameRequests[0].status === 'active') {
+                const gameRequest = await changeGameRequest({
+                    gameId: gameRequests[0].gameId,
+                    color: color,
+                    timeForGame: getTimeForGame(),
+                    timeForMove: getTimeForMove(),
+                });
+
+                setGameRequests([gameRequest, ...gameRequests.slice(1)]);
+            }
+
+            onClose();
+            setIsLoading(false);
+        } else {
+            history.push('/computer-game');
+        }
     };
 
     function onDialogClick(e: any) {
@@ -113,9 +153,27 @@ export const GameSettings: FC = () => {
                 <TimeSettings></TimeSettings>
                 {gameMode === 'computer' && <LevelSettings></LevelSettings>}
                 <ColorSettings></ColorSettings>
-                <OkButton onClick={onClick}>
-                    {gameMode === 'computer' ? 'Начать игру!' : 'Создать игру!'}
-                </OkButton>
+                {isLoading ? (
+                    <ReactLoading
+                        color={'rgba(98, 153, 36, 0.9)'}
+                        type={'spinningBubbles'}
+                        width={'40px'}
+                        height={'40px'}
+                    ></ReactLoading>
+                ) : (
+                    <OkButton
+                        disabled={
+                            (gameMode === 'man' &&
+                                getTimeForGame() === Infinity) ||
+                            (!getTimeForMove() && !getTimeForGame())
+                        }
+                        onClick={onClick}
+                    >
+                        {gameMode === 'computer'
+                            ? 'Начать игру!'
+                            : 'Создать игру!'}
+                    </OkButton>
+                )}
             </div>
         </dialog>
     );

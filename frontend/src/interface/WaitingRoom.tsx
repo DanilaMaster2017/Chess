@@ -2,30 +2,36 @@
 /** @jsx jsx */
 import { css, jsx } from '@emotion/react';
 import { FC } from 'react';
-import { Td } from './Td';
 import { Th } from './Th';
 import { Row } from './Row';
-import { getGameRequest, GameRequest } from '../requestsToServer/requests';
-import white from '../images/wK.svg';
-import black from '../images/bK.svg';
-import random from '../images/bw.svg';
-
-let imageSize = 24 + 'px';
+import { useGameRequestContext } from './GameRequestContext';
+import { useHistory } from 'react-router-dom';
+import {
+    cancelingGameRequest,
+    joinGameRequest,
+} from '../requestsToServer/requests';
 
 export const WaitingRoom: FC = () => {
-    let data: GameRequest[] = getGameRequest();
+    const {
+        gameRequests,
+        setGameRequests,
+        setIsLoading,
+    } = useGameRequestContext();
 
-    function getImage(name: string): string {
-        switch (name) {
-            case 'white':
-                return white;
-            case 'black':
-                return black;
-            case 'random':
-                return random;
-            default:
-                return '';
-        }
+    const history = useHistory();
+
+    async function joinToGame(gameId: string): Promise<void> {
+        setIsLoading(true);
+        const url = await joinGameRequest(gameId);
+        history.push(url);
+    }
+
+    async function cancelingGame(gameId: string): Promise<void> {
+        let gameRequest = gameRequests[0];
+        gameRequest.status = 'canceled';
+        setGameRequests([gameRequest, ...gameRequests.slice(1)]);
+        await cancelingGameRequest(gameId);
+        setGameRequests([...gameRequests.slice(1)]);
     }
 
     return (
@@ -58,27 +64,19 @@ export const WaitingRoom: FC = () => {
                     overflow-y: auto;
                 `}
             >
-                {data.map((gameRequest, i) => {
+                {gameRequests.map((gameRequest, i) => {
                     return (
-                        <Row key={i}>
-                            <Td>
-                                <img
-                                    css={css`
-                                        width: ${imageSize};
-                                        height: ${imageSize};
-                                    `}
-                                    src={getImage(gameRequest.color)}
-                                    alt=""
-                                />
-                            </Td>
-                            <Td>{gameRequest.playerName}</Td>
-                            <Td>
-                                {gameRequest.timeForGame +
-                                    "'+" +
-                                    gameRequest.timeForMove +
-                                    "''"}
-                            </Td>
-                        </Row>
+                        <Row
+                            key={i}
+                            onClick={() => {
+                                if (gameRequest.status === 'default') {
+                                    joinToGame(gameRequest.gameId);
+                                } else if (gameRequest.status === 'active') {
+                                    cancelingGame(gameRequest.gameId);
+                                }
+                            }}
+                            gameRequest={gameRequest}
+                        ></Row>
                     );
                 })}
             </tbody>

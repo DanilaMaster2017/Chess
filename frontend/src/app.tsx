@@ -8,6 +8,7 @@ import { GameSettingsContext } from './interface/GameSettingsContext';
 import { ComputerGamePage } from './interface/ComputerGamePage';
 import { InfoContext } from './interface/InfoContext';
 import { NotFoundPage } from './interface/NotFoundPage';
+import { GameRequestContext } from './interface/GameRequestContext';
 
 function App() {
     return (
@@ -24,7 +25,11 @@ function App() {
                 <Header></Header>
                 <GameSettingsContext>
                     <Switch>
-                        <Route exact path="/" component={StartPage}></Route>
+                        <Route exact path="/" component={StartPage}>
+                            <GameRequestContext>
+                                <StartPage></StartPage>
+                            </GameRequestContext>
+                        </Route>
                         <Route
                             path="/computer-game"
                             component={ComputerGamePage}
