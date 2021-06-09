@@ -3,6 +3,7 @@ export const playFriend = 'Сыграть c другом';
 export const playComputer = 'Сыграть с компьютером';
 export const timesForGame = [
     Infinity,
+    0,
     0.25,
     0.5,
     0.75,

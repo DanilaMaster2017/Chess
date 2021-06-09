@@ -8,12 +8,11 @@ import { Page } from './Page';
 import { getInitialPosition, Position } from '../сhessEngine/chessEngine';
 import { useInfoContext } from './InfoContext';
 import { useGameSettingsContext } from './GameSettingsContext';
-import { timesForGame } from '.././constants/constants';
 
 export const ComputerGamePage: FC = () => {
     const [position, setPosition] = useState<Position>(getInitialPosition());
 
-    const { color, level, timeForGame } = useGameSettingsContext();
+    const { color, level, getTimeForGame } = useGameSettingsContext();
     const {
         playerInfo,
         setPlayerInfo,
@@ -49,10 +48,10 @@ export const ComputerGamePage: FC = () => {
             computerLevel: level,
         });
 
-        if (timeForGame) {
+        if (getTimeForGame() !== Infinity) {
             const timeLeft = new Date(0, 0);
 
-            timeLeft.setSeconds(60 * timesForGame[timeForGame]);
+            timeLeft.setSeconds(60 * getTimeForGame());
 
             setPlayerTimeLeft(timeLeft);
             setEnemyTimeLeft(timeLeft);

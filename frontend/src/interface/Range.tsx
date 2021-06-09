@@ -23,24 +23,21 @@ export const Range: FC<Props> = ({
     const mozilaBorderRadius = '7px';
     const trackColor = '#f8b951';
 
-    const thumbHover = disabled
-        ? ''
-        : css`
-              &:hover {
-                  background-color: #faf49c;
-              }
-          `;
+    const thumbHoverStyle = css`
+        &:hover {
+            background-color: #faf49c;
+        }
+    `;
 
     const thumbStyle = css`
         width: 30px;
         border: 1px solid #b3b3b3;
         background: #ffffff;
-        cursor: pointer;
-        ${thumbHover}
+        ${!disabled && thumbHoverStyle}
     `;
+
     const trackStyle = css`
         height: 15px;
-        cursor: pointer;
     `;
 
     const onChange = (e: ChangeEvent<HTMLInputElement>) => {
@@ -97,6 +94,8 @@ export const Range: FC<Props> = ({
                     overflow: hidden;
                     width: ${rangeWidth};
                     background-color: #dbdbdb;
+                    cursor: ${disabled ? `not-allowed` : `pointer`};
+
                     @-moz-document url-prefix() {
                         & {
                             border-radius: ${mozilaBorderRadius};

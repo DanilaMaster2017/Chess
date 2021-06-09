@@ -1,4 +1,5 @@
 import React, { FC, useState, useContext, createContext } from 'react';
+import { timesForGame, timesForMove } from '../constants/constants';
 
 interface IGameSettingsContext {
     color: 'white' | 'black' | 'random';
@@ -9,6 +10,8 @@ interface IGameSettingsContext {
     setLevel: (v: number) => void;
     setTimeForGame: (v: number) => void;
     setTimeForMove: (v: number) => void;
+    getTimeForGame: () => number;
+    getTimeForMove: () => number;
 }
 
 const defaultColor = 'random';
@@ -25,6 +28,12 @@ const GameSettingsContextProvider = createContext<IGameSettingsContext>({
     setLevel: () => {},
     setTimeForGame: () => {},
     setTimeForMove: () => {},
+    getTimeForGame: () => {
+        return 0;
+    },
+    getTimeForMove: () => {
+        return 0;
+    },
 });
 
 export function useGameSettingsContext() {
@@ -39,6 +48,14 @@ export const GameSettingsContext: FC = ({ children }) => {
     const [timeForGame, setTimeForGame] = useState<number>(defaultTimeForGame);
     const [timeForMove, setTimeForMove] = useState<number>(defaultTimeForMove);
 
+    const getTimeForGame = () => {
+        return timesForGame[timeForGame];
+    };
+
+    const getTimeForMove = () => {
+        return timesForMove[timeForMove];
+    };
+
     return (
         <GameSettingsContextProvider.Provider
             value={{
@@ -50,6 +67,8 @@ export const GameSettingsContext: FC = ({ children }) => {
                 setLevel,
                 setTimeForGame,
                 setTimeForMove,
+                getTimeForGame,
+                getTimeForMove,
             }}
         >
             {children}
