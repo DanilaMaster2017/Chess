@@ -23,6 +23,7 @@ export const LevelButton: FC<Props> = ({ value }) => {
             background-color: #f6f6f6;
         }
     `;
+    const borderRadius = '5px';
 
     return (
         <button
@@ -32,6 +33,14 @@ export const LevelButton: FC<Props> = ({ value }) => {
                 padding: 10px 12px;
                 border-right: 1px solid #d9d9d9;
                 ${level === value ? activeStyle : defaultStyle}
+
+                &:first-of-type {
+                    border-radius: ${borderRadius} 0 0 ${borderRadius};
+                }
+                &:last-of-type {
+                    border-right: none;
+                    border-radius: 0 ${borderRadius} ${borderRadius} 0;
+                }
             `}
         >
             {value}

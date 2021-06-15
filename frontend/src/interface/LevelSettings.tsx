@@ -17,7 +17,6 @@ const generateLevelButtons = () => {
 };
 
 export const LevelSettings: FC = () => {
-    const borderRadius = '5px';
     return (
         <div
             css={css`
@@ -37,14 +36,7 @@ export const LevelSettings: FC = () => {
             <div
                 css={css`
                     box-shadow: 2px 2px 6px rgba(0, 0, 0, 0.4);
-                    border-radius: ${borderRadius};
-                    & button:first-child {
-                        border-radius: ${borderRadius} 0 0 ${borderRadius};
-                    }
-                    & button:last-child {
-                        border-right: none;
-                        border-radius: 0 ${borderRadius} ${borderRadius} 0;
-                    }
+                    border-radius: 5px;
                 `}
             >
                 {generateLevelButtons()}
