@@ -11,52 +11,61 @@ export const NotFoundPage: FC = () => {
             <div
                 css={css`
                     display: flex;
-                    justify-content: center;
-                    margin: 15% auto;
-                    padding: 20px 0;
-                    width: 60%;
-                    background-color: white;
-                    border-radius: 5px;
+                    height: 100%;
                 `}
             >
                 <div
                     css={css`
+                        margin: auto;
                         display: flex;
-                        color: #b3b3b3;
-                        font-size: 100px;
+                        justify-content: center;
+                        padding: 20px 0;
+                        width: 60%;
+                        background-color: white;
+                        border-radius: 5px;
                     `}
                 >
                     <div
                         css={css`
-                            font-weight: 300;
-                        `}
-                    >
-                        404
-                    </div>
-                    <div
-                        css={css`
-                            margin-left: 20px;
+                            display: flex;
+                            color: #b3b3b3;
+                            font-size: 100px;
                         `}
                     >
                         <div
                             css={css`
-                                margin: 20px 0;
-                                font-size: 30px;
-                                font-weight: bold;
-                                text-transform: uppercase;
-                                letter-spacing: 1px;
+                                font-weight: 300;
                             `}
                         >
-                            страница не найдена!
+                            404
                         </div>
                         <div
                             css={css`
-                                color: #4d4d4d;
-                                font-size: 16px;
+                                margin-left: 20px;
                             `}
                         >
-                            Вернуться на{' '}
-                            <BlueLink href={'/'}>домашнюю страницу</BlueLink>
+                            <div
+                                css={css`
+                                    margin: 20px 0;
+                                    font-size: 30px;
+                                    font-weight: bold;
+                                    text-transform: uppercase;
+                                    letter-spacing: 1px;
+                                `}
+                            >
+                                страница не найдена!
+                            </div>
+                            <div
+                                css={css`
+                                    color: #4d4d4d;
+                                    font-size: 16px;
+                                `}
+                            >
+                                Вернуться на{' '}
+                                <BlueLink href={'/'}>
+                                    домашнюю страницу
+                                </BlueLink>
+                            </div>
                         </div>
                     </div>
                 </div>
