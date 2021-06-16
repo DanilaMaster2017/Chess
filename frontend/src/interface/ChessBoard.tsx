@@ -1,22 +1,11 @@
 /** @jsxRuntime classic */
 /** @jsx jsx */
 import { css, jsx } from '@emotion/react';
-import { FC, useEffect } from 'react';
+import { FC } from 'react';
 import { Cell } from './Cell';
 import { useInfoContext } from './InfoContext';
 import { Position } from '../сhessEngine/chessEngine';
-import whitePawn from '../images/chessPieces/wp.svg';
-import whiteRook from '../images/chessPieces/wr.svg';
-import whiteBishop from '../images/chessPieces/wb.svg';
-import whiteKnight from '../images/chessPieces/wn.svg';
-import whiteKing from '../images/chessPieces/wk.svg';
-import whiteQueen from '../images/chessPieces/wq.svg';
-import blackPawn from '../images/chessPieces/bp.svg';
-import blackRook from '../images/chessPieces/br.svg';
-import blackBishop from '../images/chessPieces/bb.svg';
-import blackKnight from '../images/chessPieces/bn.svg';
-import blackKing from '../images/chessPieces/bk.svg';
-import blackQueen from '../images/chessPieces/bq.svg';
+import { Piece } from '../types/Piece';
 import long from 'long';
 
 const letters = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
@@ -29,20 +18,32 @@ interface Props {
 const getPieceFromPosition = (
     position: Position,
     cellBitboard: long
-): string | undefined => {
-    if (!position.blackPawns.and(cellBitboard).isZero()) return blackPawn;
-    if (!position.blackRooks.and(cellBitboard).isZero()) return blackRook;
-    if (!position.blackBishops.and(cellBitboard).isZero()) return blackBishop;
-    if (!position.blackKnights.and(cellBitboard).isZero()) return blackKnight;
-    if (!position.blackKing.and(cellBitboard).isZero()) return blackKing;
-    if (!position.blackQueen.and(cellBitboard).isZero()) return blackQueen;
+): Piece | undefined => {
+    if (!position.blackPawns.and(cellBitboard).isZero())
+        return { type: 'pawn', color: 'black' };
+    if (!position.blackRooks.and(cellBitboard).isZero())
+        return { type: 'rook', color: 'black' };
+    if (!position.blackBishops.and(cellBitboard).isZero())
+        return { type: 'bishop', color: 'black' };
+    if (!position.blackKnights.and(cellBitboard).isZero())
+        return { type: 'knight', color: 'black' };
+    if (!position.blackKing.and(cellBitboard).isZero())
+        return { type: 'king', color: 'black' };
+    if (!position.blackQueen.and(cellBitboard).isZero())
+        return { type: 'queen', color: 'black' };
 
-    if (!position.whitePawns.and(cellBitboard).isZero()) return whitePawn;
-    if (!position.whiteRooks.and(cellBitboard).isZero()) return whiteRook;
-    if (!position.whiteBishops.and(cellBitboard).isZero()) return whiteBishop;
-    if (!position.whiteKnights.and(cellBitboard).isZero()) return whiteKnight;
-    if (!position.whiteKing.and(cellBitboard).isZero()) return whiteKing;
-    if (!position.whiteQueen.and(cellBitboard).isZero()) return whiteQueen;
+    if (!position.whitePawns.and(cellBitboard).isZero())
+        return { type: 'pawn', color: 'white' };
+    if (!position.whiteRooks.and(cellBitboard).isZero())
+        return { type: 'rook', color: 'white' };
+    if (!position.whiteBishops.and(cellBitboard).isZero())
+        return { type: 'bishop', color: 'white' };
+    if (!position.whiteKnights.and(cellBitboard).isZero())
+        return { type: 'knight', color: 'white' };
+    if (!position.whiteKing.and(cellBitboard).isZero())
+        return { type: 'king', color: 'white' };
+    if (!position.whiteQueen.and(cellBitboard).isZero())
+        return { type: 'queen', color: 'white' };
 
     return undefined;
 };
@@ -102,19 +103,7 @@ const generateCells = (
 };
 
 export const ChessBoard: FC<Props> = ({ gamerColor, position }) => {
-    const { isReverse, setEnemyTakenPieces } = useInfoContext();
-
-    useEffect(() => {
-        setEnemyTakenPieces(
-            new Map([
-                [whitePawn, 1],
-                [whiteRook, 2],
-                [whiteBishop, 2],
-                [whiteKnight, 1],
-                [whiteQueen, 1],
-            ])
-        );
-    }, []);
+    const { isReverse } = useInfoContext();
 
     return (
         <div

@@ -5,12 +5,14 @@ import { FC, useState, useEffect } from 'react';
 import { ChessBoard } from './ChessBoard';
 import { InfoBlock } from './InfoBlock';
 import { Page } from './Page';
-import { getInitialPosition, Position } from '../сhessEngine/chessEngine';
+import { chessEngine, Position } from '../сhessEngine/chessEngine';
 import { useInfoContext } from './InfoContext';
 import { useGameSettingsContext } from './GameSettingsContext';
 
 export const ComputerGamePage: FC = () => {
-    const [position, setPosition] = useState<Position>(getInitialPosition());
+    const [position, setPosition] = useState<Position>(() => {
+        return chessEngine.getInitialPosition();
+    });
 
     const { color, level, getTimeForGame } = useGameSettingsContext();
     const {

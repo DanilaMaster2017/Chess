@@ -2,9 +2,11 @@
 /** @jsx jsx */
 import { css, jsx } from '@emotion/react';
 import { FC } from 'react';
+import { Piece } from '../types/Piece';
+import { getPieceImage } from '../functions/getPieceImage';
 
 interface Props {
-    piece?: string;
+    piece?: Piece;
     letter?: string;
     digit?: string;
     x: number;
@@ -37,7 +39,7 @@ export const Cell: FC<Props> = ({ piece, x, y, letter, digit }) => {
                         max-width: 100%;
                         max-height: 100%;
                     `}
-                    src={piece}
+                    src={getPieceImage(piece)}
                     alt=""
                 />
             )}
