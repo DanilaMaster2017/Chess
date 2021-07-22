@@ -10,9 +10,7 @@ import { useInfoContext } from './InfoContext';
 import { useGameSettingsContext } from './GameSettingsContext';
 
 export const ComputerGamePage: FC = () => {
-    const [position, setPosition] = useState<Position>(() => {
-        return chessEngine.getInitialPosition();
-    });
+    const [position, setPosition] = useState<Position>(chessEngine.position);
 
     const { color, level, getTimeForGame } = useGameSettingsContext();
     const {
