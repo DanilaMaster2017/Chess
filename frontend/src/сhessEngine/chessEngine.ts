@@ -189,7 +189,9 @@ export const chessEngine: ChessEngine = {
                 long.ONE.shiftLeft(
                     numberOfCells -
                         1 -
-                        (numberOfCellsInRow - 1 - i / numberOfCellsInRow) -
+                        (numberOfCellsInRow -
+                            1 -
+                            Math.floor(i / numberOfCellsInRow)) -
                         numberOfCellsInRow * (i % numberOfCellsInRow)
                 )
             );
@@ -325,9 +327,9 @@ export const chessEngine: ChessEngine = {
                             pieceBeforePositionHorizontal = index;
                         }
 
-                        if (index < i / numberOfCellsInRow) {
+                        if (index < Math.floor(i / numberOfCellsInRow)) {
                             pieceAfterPositionVertical = index;
-                        } else if (index > i / numberOfCellsInRow) {
+                        } else if (index > Math.floor(i / numberOfCellsInRow)) {
                             pieceBeforePositionVertical = index;
                         }
                     }
@@ -342,7 +344,11 @@ export const chessEngine: ChessEngine = {
                     resetBitsBefore[pieceBeforePositionHorizontal - 1];
 
                 lineOfAttaсkVertical &=
-                    resetBit[numberOfCellsInRow - 1 - i / numberOfCellsInRow];
+                    resetBit[
+                        numberOfCellsInRow -
+                            1 -
+                            Math.floor(i / numberOfCellsInRow)
+                    ];
                 lineOfAttaсkVertical &=
                     resetBitsAfter[pieceAfterPositionVertical - 1];
                 lineOfAttaсkVertical &=
@@ -355,7 +361,8 @@ export const chessEngine: ChessEngine = {
                     if (lineOfAttaсkHorizontal % 2) {
                         horizontalAttack = horizontalAttack.or(
                             this.setMask[
-                                (i / numberOfCellsInRow) * numberOfCellsInRow +
+                                Math.floor(i / numberOfCellsInRow) *
+                                    numberOfCellsInRow +
                                     numberOfCellsInRow -
                                     1 -
                                     k
