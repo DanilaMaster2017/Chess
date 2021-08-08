@@ -4,9 +4,9 @@ import { css, jsx } from '@emotion/react';
 import { FC } from 'react';
 import { Cell } from './Cell';
 import { useInfoContext } from './InfoContext';
-import { Position } from '../сhessEngine/chessEngine';
 import { Piece } from '../types/Piece';
 import long from 'long';
+import { Position } from '../types/Position';
 
 const letters = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
 

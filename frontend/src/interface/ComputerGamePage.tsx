@@ -5,9 +5,10 @@ import { FC, useState, useEffect } from 'react';
 import { ChessBoard } from './ChessBoard';
 import { InfoBlock } from './InfoBlock';
 import { Page } from './Page';
-import { chessEngine, Position } from '../сhessEngine/chessEngine';
+import { chessEngine } from '../сhessEngine/chessEngine';
 import { useInfoContext } from './InfoContext';
 import { useGameSettingsContext } from './GameSettingsContext';
+import { Position } from '../types/Position';
 
 export const ComputerGamePage: FC = () => {
     const [position, setPosition] = useState<Position>(chessEngine.position);
