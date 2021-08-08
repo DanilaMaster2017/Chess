@@ -20,75 +20,80 @@ const notAB: long = new long(0xfcfcfcfc, 0xfcfcfcfc);
 const notH: long = new long(0x7f7f7f7f, 0x7f7f7f7f);
 const notGH: long = new long(0x3f3f3f3f, 0x3f3f3f3f);
 
-interface ChessEngine {
-    setMask: long[];
-    setMaskRotatedLeft90: long[];
-    setMaskRotatedLeft45: long[];
-    setMaskRotatedRight45: long[];
+interface IChessEngine {
     position: Position;
-    positionRotatedLeft90: long;
-    positionRotatedLeft45: long;
-    positionRotatedRight45: long;
-    knightsAttaks: long[];
-    kingAttaks: long[];
-    pawnsMoves: Pawns;
-    horizontalAttacks: long[][];
-    verticalAttacks: long[][];
-    diagonalA1H8Attacks: long[][];
-    diagonalH1A8Attacks: long[][];
-    initializeBitboards: () => void;
     getPossibleMoves: (cell: number, p: Piece) => long;
     getComputerMove: (p: Position) => Promise<Position>;
 }
 
-export const chessEngine: ChessEngine = {
-    position: {
-        whitePawns: long.ONE.shiftLeft(48)
-            .or(long.ONE.shiftLeft(49))
-            .or(long.ONE.shiftLeft(50))
-            .or(long.ONE.shiftLeft(51))
-            .or(long.ONE.shiftLeft(52))
-            .or(long.ONE.shiftLeft(53))
-            .or(long.ONE.shiftLeft(54))
-            .or(long.ONE.shiftLeft(55)),
-        whiteKnights: long.ONE.shiftLeft(62).or(long.ONE.shiftLeft(57)),
-        whiteRooks: long.ONE.shiftLeft(63).or(long.ONE.shiftLeft(56)),
-        whiteBishops: long.ONE.shiftLeft(61).or(long.ONE.shiftLeft(58)),
-        whiteQueen: long.ONE.shiftLeft(59),
-        whiteKing: long.ONE.shiftLeft(60),
-        blackPawns: long.ONE.shiftLeft(8)
-            .or(long.ONE.shiftLeft(9))
-            .or(long.ONE.shiftLeft(10))
-            .or(long.ONE.shiftLeft(11))
-            .or(long.ONE.shiftLeft(12))
-            .or(long.ONE.shiftLeft(13))
-            .or(long.ONE.shiftLeft(14))
-            .or(long.ONE.shiftLeft(15)),
-        blackKnights: long.ONE.shiftLeft(6).or(long.ONE.shiftLeft(1)),
-        blackRooks: long.ONE.shiftLeft(7).or(long.ONE),
-        blackBishops: long.ONE.shiftLeft(5).or(long.ONE.shiftLeft(2)),
-        blackQueen: long.ONE.shiftLeft(3),
-        blackKing: long.ONE.shiftLeft(4),
-    },
-    setMask: [],
-    setMaskRotatedLeft90: [],
-    setMaskRotatedLeft45: [],
-    setMaskRotatedRight45: [],
-    positionRotatedLeft90: long.ZERO,
-    positionRotatedLeft45: long.ZERO,
-    positionRotatedRight45: long.ZERO,
-    kingAttaks: [],
-    knightsAttaks: [],
-    pawnsMoves: {
-        white: { attacks: [], moves: [] },
-        black: { attacks: [], moves: [] },
-    },
-    horizontalAttacks: [],
-    verticalAttacks: [],
-    diagonalA1H8Attacks: [],
-    diagonalH1A8Attacks: [],
+class ChessEngine implements IChessEngine {
+    public position: Position;
 
-    initializeBitboards() {
+    private setMask: long[];
+    private setMaskRotatedLeft90: long[];
+    private setMaskRotatedLeft45: long[];
+    private setMaskRotatedRight45: long[];
+    private positionRotatedLeft90: long;
+    private positionRotatedLeft45: long;
+    private positionRotatedRight45: long;
+    private kingAttaks: long[];
+    private knightsAttaks: long[];
+    private pawnsMoves: Pawns;
+    private horizontalAttacks: long[][];
+    private verticalAttacks: long[][];
+    private diagonalA1H8Attacks: long[][];
+    private diagonalH1A8Attacks: long[][];
+
+    constructor() {
+        this.position = {
+            whitePawns: long.ONE.shiftLeft(48)
+                .or(long.ONE.shiftLeft(49))
+                .or(long.ONE.shiftLeft(50))
+                .or(long.ONE.shiftLeft(51))
+                .or(long.ONE.shiftLeft(52))
+                .or(long.ONE.shiftLeft(53))
+                .or(long.ONE.shiftLeft(54))
+                .or(long.ONE.shiftLeft(55)),
+            whiteKnights: long.ONE.shiftLeft(62).or(long.ONE.shiftLeft(57)),
+            whiteRooks: long.ONE.shiftLeft(63).or(long.ONE.shiftLeft(56)),
+            whiteBishops: long.ONE.shiftLeft(61).or(long.ONE.shiftLeft(58)),
+            whiteQueen: long.ONE.shiftLeft(59),
+            whiteKing: long.ONE.shiftLeft(60),
+            blackPawns: long.ONE.shiftLeft(8)
+                .or(long.ONE.shiftLeft(9))
+                .or(long.ONE.shiftLeft(10))
+                .or(long.ONE.shiftLeft(11))
+                .or(long.ONE.shiftLeft(12))
+                .or(long.ONE.shiftLeft(13))
+                .or(long.ONE.shiftLeft(14))
+                .or(long.ONE.shiftLeft(15)),
+            blackKnights: long.ONE.shiftLeft(6).or(long.ONE.shiftLeft(1)),
+            blackRooks: long.ONE.shiftLeft(7).or(long.ONE),
+            blackBishops: long.ONE.shiftLeft(5).or(long.ONE.shiftLeft(2)),
+            blackQueen: long.ONE.shiftLeft(3),
+            blackKing: long.ONE.shiftLeft(4),
+        };
+
+        this.setMask = [];
+        this.setMaskRotatedLeft90 = [];
+        this.setMaskRotatedLeft45 = [];
+        this.setMaskRotatedRight45 = [];
+        this.kingAttaks = [];
+        this.knightsAttaks = [];
+        this.horizontalAttacks = [];
+        this.verticalAttacks = [];
+        this.diagonalA1H8Attacks = [];
+        this.diagonalH1A8Attacks = [];
+
+        this.positionRotatedLeft90 = long.ZERO;
+        this.positionRotatedLeft45 = long.ZERO;
+        this.positionRotatedRight45 = long.ZERO;
+
+        this.pawnsMoves = {
+            white: { attacks: [], moves: [] },
+            black: { attacks: [], moves: [] },
+        };
+
         for (let i = 0; i < numberOfCells; i++) {
             const piecePosition: long = long.ONE.shiftLeft(
                 numberOfCells - 1 - i
@@ -542,13 +547,15 @@ export const chessEngine: ChessEngine = {
                 this.diagonalH1A8Attacks.push(attacksFromPosition);
             }
         }
-    },
+    }
 
-    getPossibleMoves(cell: number, piece: Piece) {
+    getPossibleMoves(cell: number, piece: Piece): long {
         return long.ZERO;
-    },
+    }
 
     async getComputerMove(position: Position): Promise<Position> {
         return position;
-    },
-};
+    }
+}
+
+export const chessEngine: ChessEngine = new ChessEngine();
