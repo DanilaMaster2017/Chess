@@ -29,6 +29,15 @@ interface IChessEngine {
 class ChessEngine implements IChessEngine {
     public position: Position;
 
+    private minus7: long[];
+    private minus8: long[];
+    private minus9: long[];
+    private minus1: long[];
+    private plus7: long[];
+    private plus8: long[];
+    private plus9: long[];
+    private plus1: long[];
+
     private setMask: long[];
     private setMaskRotatedLeft90: long[];
     private setMaskRotatedLeft45: long[];
@@ -73,6 +82,15 @@ class ChessEngine implements IChessEngine {
             blackQueen: long.ONE.shiftLeft(3),
             blackKing: long.ONE.shiftLeft(4),
         };
+
+        this.minus7 = [];
+        this.minus8 = [];
+        this.minus9 = [];
+        this.minus1 = [];
+        this.plus7 = [];
+        this.plus8 = [];
+        this.plus9 = [];
+        this.plus1 = [];
 
         this.setMask = [];
         this.setMaskRotatedLeft90 = [];
@@ -270,6 +288,89 @@ class ChessEngine implements IChessEngine {
                         this.setMaskRotatedRight45.length - 1 - i
                     ]
                 );
+        }
+
+        for (let i = 0; i < numberOfCellsInRow; i++) {
+            for (let j = 0; j < numberOfCellsInRow; j++) {
+                const piecePosition: long = long.ONE.shiftLeft(
+                    numberOfCells - 1 - i * numberOfCellsInRow - j
+                );
+
+                let minus1Attack: long = long.ZERO;
+                for (let k = 0; k < j; k++) {
+                    minus1Attack.or(piecePosition.shiftLeft(k + 1));
+                }
+                this.minus1.push(minus1Attack);
+
+                let minus7Attack: long = long.ZERO;
+                for (let k = 0; k < i && k < numberOfCellsInRow - 1 - j; k++) {
+                    minus7Attack.or(
+                        piecePosition.shiftLeft(
+                            (k + 1) * (numberOfCellsInRow - 1)
+                        )
+                    );
+                }
+                this.minus9.push(minus7Attack);
+
+                let minus8Attack: long = long.ZERO;
+                for (let k = 0; k < i; k++) {
+                    minus8Attack.or(
+                        piecePosition.shiftLeft((k + 1) * numberOfCellsInRow)
+                    );
+                }
+                this.minus8.push(minus8Attack);
+
+                let minus9Attack: long = long.ZERO;
+                for (let k = 0; k < i && k < j; k++) {
+                    minus9Attack.or(
+                        piecePosition.shiftLeft(
+                            (k + 1) * (numberOfCellsInRow + 1)
+                        )
+                    );
+                }
+                this.minus7.push(minus9Attack);
+
+                let plus1Attack: long = long.ZERO;
+                for (let k = 0; k < numberOfCellsInRow - 1 - j; k++) {
+                    plus1Attack.or(piecePosition.shiftRightUnsigned(k + 1));
+                }
+                this.plus1.push(plus1Attack);
+
+                let plus7Attack: long = long.ZERO;
+                for (let k = 0; k < numberOfCellsInRow - 1 - i && k < j; k++) {
+                    plus7Attack.or(
+                        piecePosition.shiftRightUnsigned(
+                            (k + 1) * (numberOfCellsInRow - 1)
+                        )
+                    );
+                }
+                this.plus7.push(plus7Attack);
+
+                let plus8Attack: long = long.ZERO;
+                for (let k = 0; k < numberOfCellsInRow - 1 - i; k++) {
+                    plus8Attack.or(
+                        piecePosition.shiftRightUnsigned(
+                            (k + 1) * numberOfCellsInRow
+                        )
+                    );
+                }
+                this.plus8.push(plus8Attack);
+
+                let plus9Attack: long = long.ZERO;
+                for (
+                    let k = 0;
+                    k < numberOfCellsInRow - 1 - i &&
+                    k < numberOfCellsInRow - 1 - j;
+                    k++
+                ) {
+                    plus9Attack.or(
+                        piecePosition.shiftRightUnsigned(
+                            (k + 1) * (numberOfCellsInRow + 1)
+                        )
+                    );
+                }
+                this.plus9.push(plus9Attack);
+            }
         }
 
         const resetBit: number[] = [];
