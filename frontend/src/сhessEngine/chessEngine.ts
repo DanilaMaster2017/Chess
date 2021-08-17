@@ -45,8 +45,8 @@ class ChessEngine implements IChessEngine {
     private positionRotatedLeft90: long;
     private positionRotatedLeft45: long;
     private positionRotatedRight45: long;
-    private kingAttaks: long[];
-    private knightsAttaks: long[];
+    private kingAttacks: long[];
+    private knightsAttacks: long[];
     private pawnsMoves: Pawns;
     private horizontalAttacks: long[][];
     private verticalAttacks: long[][];
@@ -96,8 +96,8 @@ class ChessEngine implements IChessEngine {
         this.setMaskRotatedLeft90 = [];
         this.setMaskRotatedLeft45 = [];
         this.setMaskRotatedRight45 = [];
-        this.kingAttaks = [];
-        this.knightsAttaks = [];
+        this.kingAttacks = [];
+        this.knightsAttacks = [];
         this.horizontalAttacks = [];
         this.verticalAttacks = [];
         this.diagonalA1H8Attacks = [];
@@ -117,7 +117,7 @@ class ChessEngine implements IChessEngine {
                 numberOfCells - 1 - i
             );
 
-            this.knightsAttaks.push(
+            this.knightsAttacks.push(
                 notGH
                     .and(
                         piecePosition
@@ -147,7 +147,7 @@ class ChessEngine implements IChessEngine {
                     )
             );
 
-            this.kingAttaks.push(
+            this.kingAttacks.push(
                 piecePosition
                     .shiftLeft(8)
                     .or(piecePosition.shiftRightUnsigned(8))
