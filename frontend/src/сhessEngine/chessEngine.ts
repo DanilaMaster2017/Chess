@@ -53,6 +53,8 @@ class ChessEngine implements IChessEngine {
     private diagonalA1H8Attacks: long[][];
     private diagonalH1A8Attacks: long[][];
 
+    private attacksTo: long[];
+
     constructor() {
         this.position = {
             whitePawns: long.ONE.shiftLeft(48)
@@ -102,6 +104,7 @@ class ChessEngine implements IChessEngine {
         this.verticalAttacks = [];
         this.diagonalA1H8Attacks = [];
         this.diagonalH1A8Attacks = [];
+        this.attacksTo = [];
 
         this.positionRotatedLeft90 = long.ZERO;
         this.positionRotatedLeft45 = long.ZERO;
@@ -656,6 +659,115 @@ class ChessEngine implements IChessEngine {
 
     async getComputerMove(position: Position): Promise<Position> {
         return position;
+    }
+
+    private сalculateAttacksTo(): void {
+        for (let i = 0; i < numberOfCells; i++) {
+            let line = 0x11111111;
+            let row: number = Math.floor(i / numberOfCellsInRow);
+            let column = i % numberOfCellsInRow;
+
+            let horizontalLine: number = this.getPosition()
+                .shiftRightUnsigned(
+                    (numberOfCellsInRow - 1 - row) * numberOfCellsInRow
+                )
+                .and(line)
+                .getLowBitsUnsigned();
+
+            let verticalLine: number = this.positionRotatedLeft90
+                .shiftRightUnsigned(
+                    (numberOfCellsInRow - 1 - column) * numberOfCellsInRow
+                )
+                .and(line)
+                .getLowBitsUnsigned();
+
+            let shiftH1A8: number = 0;
+            let shiftA1H8: number = 0;
+            for (
+                let j = 0;
+                j < 2 * (numberOfCellsInRow - 1) - row - column;
+                j++
+            ) {
+                shiftH1A8 +=
+                    numberOfCellsInRow - Math.abs(numberOfCellsInRow - 1 - j);
+            }
+            for (let j = 0; j < numberOfCellsInRow - 1 - row + column; j++) {
+                shiftA1H8 +=
+                    numberOfCellsInRow - Math.abs(numberOfCellsInRow - 1 - j);
+            }
+
+            let diagonalH1A8Line: number = this.positionRotatedLeft45
+                .shiftRightUnsigned(shiftH1A8)
+                .and(line)
+                .getLowBitsUnsigned();
+
+            let diagonalA1H8Line: number = this.positionRotatedRight45
+                .shiftRightUnsigned(shiftA1H8)
+                .and(line)
+                .getLowBitsUnsigned();
+
+            this.attacksTo[i] = this.kingAttacks[i]
+                .and(this.position.blackKing.or(this.position.whiteKing))
+                .or(
+                    this.knightsAttacks[i].and(
+                        this.position.blackKnights.or(
+                            this.position.whiteKnights
+                        )
+                    )
+                )
+                .or(
+                    this.pawnsMoves.black.attacks[i].and(
+                        this.position.blackPawns
+                    )
+                )
+                .or(
+                    this.pawnsMoves.white.attacks[i].and(
+                        this.position.whitePawns
+                    )
+                )
+                .or(
+                    this.horizontalAttacks[i][horizontalLine]
+                        .or(this.verticalAttacks[i][verticalLine])
+                        .and(
+                            this.position.blackQueen
+                                .or(this.position.whiteQueen)
+                                .or(this.position.blackRooks)
+                                .or(this.position.whiteRooks)
+                        )
+                )
+                .or(
+                    this.diagonalH1A8Attacks[i][diagonalH1A8Line]
+                        .or(this.diagonalA1H8Attacks[i][diagonalA1H8Line])
+                        .and(
+                            this.position.blackQueen
+                                .or(this.position.whiteQueen)
+                                .or(this.position.blackBishops)
+                                .or(this.position.whiteBishops)
+                        )
+                );
+        }
+    }
+
+    private getWhitePosition(): long {
+        return this.position.whiteBishops
+            .or(this.position.whiteKing)
+            .or(this.position.whiteKnights)
+            .or(this.position.whitePawns)
+            .or(this.position.whiteQueen)
+            .or(this.position.whiteRooks);
+    }
+
+    private getBlackPosition(): long {
+        return this.position.blackBishops
+            .or(this.position.blackKing)
+            .or(this.position.blackKnights)
+            .or(this.position.blackPawns)
+            .or(this.position.blackQueen)
+            .or(this.position.blackRooks);
+    }
+
+    private getPosition(): long {
+        return this.getBlackPosition().or(this.getWhitePosition());
     }
 }
 
