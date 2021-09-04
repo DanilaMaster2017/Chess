@@ -1,15 +1,17 @@
 import long from 'long';
 import { Piece } from '../types/Piece';
 import { Position } from '../types/Position';
+import { Players } from '../types/Players';
 
 interface PawnsMoves {
     attacks: long[];
     moves: long[];
 }
 
-interface Pawns {
-    white: PawnsMoves;
-    black: PawnsMoves;
+interface IChessEngine {
+    position: Position;
+    getPossibleMoves: (cell: number, p: Piece) => long;
+    getComputerMove: (p: Position) => Promise<Position>;
 }
 
 const numberOfCells = 64;
@@ -47,7 +49,7 @@ class ChessEngine implements IChessEngine {
     private positionRotatedRight45: long;
     private kingAttacks: long[];
     private knightsAttacks: long[];
-    private pawnsMoves: Pawns;
+    private pawnsMoves: Players;
     private horizontalAttacks: long[][];
     private verticalAttacks: long[][];
     private diagonalA1H8Attacks: long[][];
@@ -116,100 +118,7 @@ class ChessEngine implements IChessEngine {
         };
 
         for (let i = 0; i < numberOfCells; i++) {
-            const piecePosition: long = long.ONE.shiftLeft(
-                numberOfCells - 1 - i
-            );
-
-            this.knightsAttacks.push(
-                notGH
-                    .and(
-                        piecePosition
-                            .shiftLeft(6)
-                            .or(piecePosition.shiftRightUnsigned(10))
-                    )
-                    .or(
-                        notH.and(
-                            piecePosition
-                                .shiftLeft(15)
-                                .or(piecePosition.shiftRightUnsigned(17))
-                        )
-                    )
-                    .or(
-                        notA.and(
-                            piecePosition
-                                .shiftLeft(17)
-                                .or(piecePosition.shiftRightUnsigned(15))
-                        )
-                    )
-                    .or(
-                        notAB.and(
-                            piecePosition
-                                .shiftLeft(10)
-                                .or(piecePosition.shiftRightUnsigned(6))
-                        )
-                    )
-            );
-
-            this.kingAttacks.push(
-                piecePosition
-                    .shiftLeft(8)
-                    .or(piecePosition.shiftRightUnsigned(8))
-                    .or(
-                        notH.and(
-                            piecePosition
-                                .shiftLeft(9)
-                                .or(piecePosition.shiftLeft(1))
-                                .or(piecePosition.shiftRightUnsigned(7))
-                        )
-                    )
-                    .or(
-                        notA.and(
-                            piecePosition
-                                .shiftRightUnsigned(9)
-                                .or(piecePosition.shiftRightUnsigned(1))
-                                .or(piecePosition.shiftLeft(7))
-                        )
-                    )
-            );
-        }
-
-        for (
-            let i = numberOfCellsInRow;
-            i < numberOfCells - numberOfCellsInRow;
-            i++
-        ) {
-            const piecePosition: long = long.ONE.shiftLeft(
-                numberOfCells - 1 - i
-            );
-
-            this.pawnsMoves.black.moves[i] = piecePosition.shiftLeft(
-                numberOfCellsInRow
-            );
-            this.pawnsMoves.white.moves[i] = piecePosition.shiftRightUnsigned(
-                numberOfCellsInRow
-            );
-
-            this.pawnsMoves.black.attacks[i] = piecePosition
-                .shiftLeft(numberOfCellsInRow - 1)
-                .and(notH)
-                .or(piecePosition.shiftLeft(numberOfCellsInRow + 1).and(notA));
-
-            this.pawnsMoves.white.attacks[i] = piecePosition
-                .shiftRightUnsigned(numberOfCellsInRow - 1)
-                .and(notA)
-                .or(
-                    piecePosition
-                        .shiftRightUnsigned(numberOfCellsInRow + 1)
-                        .and(notH)
-                );
-        }
-
-        for (let i = 0; i < numberOfCells; i++) {
-            const piecePosition: long = long.ONE.shiftLeft(
-                numberOfCells - 1 - i
-            );
-
-            this.setMask.push(piecePosition);
+            this.setMask.push(long.ONE.shiftLeft(numberOfCells - 1 - i));
 
             this.setMaskRotatedLeft90.push(
                 long.ONE.shiftLeft(
@@ -236,9 +145,7 @@ class ChessEngine implements IChessEngine {
                     cellIncrement = 15 - (i + j);
                 }
 
-                this.setMaskRotatedLeft45.push(
-                    long.ONE.shiftLeft(numberOfCells - 1 - index)
-                );
+                this.setMaskRotatedLeft45.push(this.setMask[index]);
                 index += cellIncrement;
             }
 
@@ -258,14 +165,58 @@ class ChessEngine implements IChessEngine {
                     cellIncrement = 8 - i + j;
                 }
 
-                this.setMaskRotatedRight45.push(
-                    long.ONE.shiftLeft(numberOfCells - 1 - index)
-                );
+                this.setMaskRotatedRight45.push(this.setMask[index]);
                 index -= cellIncrement;
             }
 
             rowIncrement -= i;
         }
+
+        this.position = {
+            pawns: {
+                white: this.setMask[8]
+                    .or(this.setMask[9])
+                    .or(this.setMask[10])
+                    .or(this.setMask[11])
+                    .or(this.setMask[12])
+                    .or(this.setMask[13])
+                    .or(this.setMask[14])
+                    .or(this.setMask[15]),
+                black: this.setMask[48]
+                    .or(this.setMask[49])
+                    .or(this.setMask[50])
+                    .or(this.setMask[51])
+                    .or(this.setMask[52])
+                    .or(this.setMask[53])
+                    .or(this.setMask[54])
+                    .or(this.setMask[55]),
+            },
+
+            knights: {
+                white: this.setMask[6].or(this.setMask[1]),
+                black: this.setMask[62].or(this.setMask[57]),
+            },
+
+            rooks: {
+                white: this.setMask[7].or(this.setMask[0]),
+                black: this.setMask[63].or(this.setMask[56]),
+            },
+
+            bishops: {
+                white: this.setMask[5].or(this.setMask[2]),
+                black: this.setMask[61].or(this.setMask[58]),
+            },
+
+            queen: {
+                white: this.setMask[3],
+                black: this.setMask[59],
+            },
+
+            king: {
+                white: this.setMask[4],
+                black: this.setMask[60],
+            },
+        };
 
         for (let i = 0; i < numberOfCellsInRow * 2; i++) {
             this.positionRotatedLeft90 = this.positionRotatedLeft90
@@ -293,61 +244,92 @@ class ChessEngine implements IChessEngine {
                 );
         }
 
-        for (let i = 0; i < numberOfCellsInRow; i++) {
-            for (let j = 0; j < numberOfCellsInRow; j++) {
-                const piecePosition: long = long.ONE.shiftLeft(
-                    numberOfCells - 1 - i * numberOfCellsInRow - j
-                );
+        for (let i = 0; i < numberOfCells; i++) {
+            const piecePosition = long.ONE.shiftLeft(numberOfCells - 1 - i);
 
-                let minus1Attack: long = long.ZERO;
-                for (let k = 0; k < j; k++) {
-                    minus1Attack.or(piecePosition.shiftLeft(k + 1));
-                }
-                this.minus1.push(minus1Attack);
-
-                let minus7Attack: long = long.ZERO;
-                for (let k = 0; k < i && k < numberOfCellsInRow - 1 - j; k++) {
-                    minus7Attack.or(
-                        piecePosition.shiftLeft(
-                            (k + 1) * (numberOfCellsInRow - 1)
+            this.knightsAttacks.push(
+                notGH
+                    .and(
+                        piecePosition
+                            .shiftLeft(6)
+                            .or(piecePosition.shiftRight(10))
+                    )
+                    .or(
+                        notH.and(
+                            piecePosition
+                                .shiftLeft(15)
+                                .or(piecePosition.shiftRight(17))
+                        )
+                    )
+                    .or(
+                        notA.and(
+                            piecePosition
+                                .shiftLeft(17)
+                                .or(piecePosition.shiftRight(15))
+                        )
+                    )
+                    .or(
+                        notAB.and(
+                            piecePosition
+                                .shiftLeft(10)
+                                .or(piecePosition.shiftRight(6))
+                        )
                         )
                     );
                 }
                 this.minus9.push(minus7Attack);
 
-                let minus8Attack: long = long.ZERO;
-                for (let k = 0; k < i; k++) {
-                    minus8Attack.or(
-                        piecePosition.shiftLeft((k + 1) * numberOfCellsInRow)
+            this.kingAttacks.push(
+                piecePosition
+                    .shiftLeft(8)
+                    .or(piecePosition.shiftRightUnsigned(8))
+                    .or(
+                        notH.and(
+                            piecePosition
+                                .shiftLeft(9)
+                                .or(piecePosition.shiftLeft(1))
+                                .or(piecePosition.shiftRightUnsigned(7))
+                        )
+                    )
+                    .or(
+                        notA.and(
+                            piecePosition
+                                .shiftRightUnsigned(9)
+                                .or(piecePosition.shiftRightUnsigned(1))
+                                .or(piecePosition.shiftLeft(7))
+                        )
+                    )
                     );
                 }
                 this.minus8.push(minus8Attack);
 
-                let minus9Attack: long = long.ZERO;
-                for (let k = 0; k < i && k < j; k++) {
-                    minus9Attack.or(
-                        piecePosition.shiftLeft(
-                            (k + 1) * (numberOfCellsInRow + 1)
-                        )
-                    );
-                }
-                this.minus7.push(minus9Attack);
+        for (
+            let i = numberOfCellsInRow;
+            i < numberOfCells - numberOfCellsInRow;
+            i++
+        ) {
+            const piecePosition = long.ONE.shiftLeft(numberOfCells - 1 - i);
 
-                let plus1Attack: long = long.ZERO;
-                for (let k = 0; k < numberOfCellsInRow - 1 - j; k++) {
-                    plus1Attack.or(piecePosition.shiftRightUnsigned(k + 1));
-                }
-                this.plus1.push(plus1Attack);
-
-                let plus7Attack: long = long.ZERO;
-                for (let k = 0; k < numberOfCellsInRow - 1 - i && k < j; k++) {
-                    plus7Attack.or(
-                        piecePosition.shiftRightUnsigned(
-                            (k + 1) * (numberOfCellsInRow - 1)
-                        )
+            this.pawnsMoves.black.moves[i] = piecePosition.shiftLeft(
+                numberOfCellsInRow
                     );
-                }
-                this.plus7.push(plus7Attack);
+            this.pawnsMoves.white.moves[i] = piecePosition.shiftRightUnsigned(
+                numberOfCellsInRow
+            );
+
+            this.pawnsMoves.black.attacks[i] = piecePosition
+                .shiftLeft(numberOfCellsInRow - 1)
+                .and(notH)
+                .or(piecePosition.shiftLeft(numberOfCellsInRow + 1).and(notA));
+
+            this.pawnsMoves.white.attacks[i] = piecePosition
+                .shiftRightUnsigned(numberOfCellsInRow - 1)
+                .and(notA)
+                .or(
+                    piecePosition
+                        .shiftRightUnsigned(numberOfCellsInRow + 1)
+                        .and(notH)
+                    );
 
                 let plus8Attack: long = long.ZERO;
                 for (let k = 0; k < numberOfCellsInRow - 1 - i; k++) {
@@ -667,107 +649,140 @@ class ChessEngine implements IChessEngine {
             let row: number = Math.floor(i / numberOfCellsInRow);
             let column = i % numberOfCellsInRow;
 
-            let horizontalLine: number = this.getPosition()
+    private getVerticalAttack(from: number): long {
+        const line = 0x11111111;
+        const column = from % numberOfCellsInRow;
+
+        const verticalLine: number = this.positionRotatedLeft90
                 .shiftRightUnsigned(
-                    (numberOfCellsInRow - 1 - row) * numberOfCellsInRow
+                (numberOfCellsInRow - 1 - column) * numberOfCellsInRow
                 )
                 .and(line)
                 .getLowBitsUnsigned();
 
-            let verticalLine: number = this.positionRotatedLeft90
+        return this.verticalAttacks[from][verticalLine];
+    }
+
+    private getHorizontalAttack(from: number): long {
+        const line = 0x11111111;
+        const row: number = Math.floor(from / numberOfCellsInRow);
+
+        const horizontalLine: number = this.getPositionForAll()
                 .shiftRightUnsigned(
-                    (numberOfCellsInRow - 1 - column) * numberOfCellsInRow
+                (numberOfCellsInRow - 1 - row) * numberOfCellsInRow
                 )
                 .and(line)
                 .getLowBitsUnsigned();
 
-            let shiftH1A8: number = 0;
-            let shiftA1H8: number = 0;
-            for (
-                let j = 0;
-                j < 2 * (numberOfCellsInRow - 1) - row - column;
-                j++
-            ) {
-                shiftH1A8 +=
-                    numberOfCellsInRow - Math.abs(numberOfCellsInRow - 1 - j);
-            }
-            for (let j = 0; j < numberOfCellsInRow - 1 - row + column; j++) {
-                shiftA1H8 +=
-                    numberOfCellsInRow - Math.abs(numberOfCellsInRow - 1 - j);
+        return this.horizontalAttacks[from][horizontalLine];
             }
 
-            let diagonalH1A8Line: number = this.positionRotatedLeft45
-                .shiftRightUnsigned(shiftH1A8)
+    private getDiagonalH1A8Attack(from: number): long {
+        const line = 0x11111111;
+        const column = from % numberOfCellsInRow;
+        const row: number = Math.floor(from / numberOfCellsInRow);
+
+        let shift: number = 0;
+        if (row + column > 5) {
+            const number = 14 - row - column;
+            shift = ((2 + number - 1) / 2) * number;
+        } else {
+            const number = 6 - row - column;
+            shift = 36 + ((14 - number + 1) / 2) * number;
+            }
+
+        const diagonalH1A8Line: number = this.positionRotatedLeft45
+            .shiftRightUnsigned(shift)
                 .and(line)
                 .getLowBitsUnsigned();
 
-            let diagonalA1H8Line: number = this.positionRotatedRight45
-                .shiftRightUnsigned(shiftA1H8)
+        return this.diagonalH1A8Attacks[from][diagonalH1A8Line];
+    }
+
+    private getDiagonalA1H8Attack(from: number): long {
+        const line = 0x11111111;
+        const column = from % numberOfCellsInRow;
+        const row: number = Math.floor(from / numberOfCellsInRow);
+
+        let shift: number = 0;
+        if (row >= column) {
+            const number = 7 - row + column;
+            shift = ((2 + number - 1) / 2) * number;
+        } else {
+            const number = column - row;
+            shift = 28 + ((16 - number + 1) / 2) * number;
+        }
+
+        for (let j = 0; j < numberOfCellsInRow - 1 - row + column; j++) {
+            shift += numberOfCellsInRow - Math.abs(numberOfCellsInRow - 1 - j);
+        }
+
+        const diagonalA1H8Line: number = this.positionRotatedRight45
+            .shiftRightUnsigned(shift)
                 .and(line)
                 .getLowBitsUnsigned();
 
+        return this.diagonalA1H8Attacks[from][diagonalA1H8Line];
+    }
+    async getComputerMove(position: Position): Promise<Position> {
+        return position;
+    }
+
+    private сalculateAttacksTo(): void {
+        for (let i = 0; i < numberOfCells; i++) {
             this.attacksTo[i] = this.kingAttacks[i]
-                .and(this.position.blackKing.or(this.position.whiteKing))
+                .and(this.position.king.black.or(this.position.king.white))
                 .or(
                     this.knightsAttacks[i].and(
-                        this.position.blackKnights.or(
-                            this.position.whiteKnights
+                        this.position.knights.black.or(
+                            this.position.knights.white
                         )
                     )
                 )
                 .or(
                     this.pawnsMoves.black.attacks[i].and(
-                        this.position.blackPawns
+                        this.position.pawns.black
                     )
                 )
                 .or(
                     this.pawnsMoves.white.attacks[i].and(
-                        this.position.whitePawns
+                        this.position.pawns.white
                     )
                 )
                 .or(
-                    this.horizontalAttacks[i][horizontalLine]
-                        .or(this.verticalAttacks[i][verticalLine])
+                    this.getHorizontalAttack(i)
+                        .or(this.getVerticalAttack(i))
                         .and(
-                            this.position.blackQueen
-                                .or(this.position.whiteQueen)
-                                .or(this.position.blackRooks)
-                                .or(this.position.whiteRooks)
+                            this.position.queen.black
+                                .or(this.position.queen.white)
+                                .or(this.position.rooks.black)
+                                .or(this.position.rooks.white)
                         )
                 )
                 .or(
-                    this.diagonalH1A8Attacks[i][diagonalH1A8Line]
-                        .or(this.diagonalA1H8Attacks[i][diagonalA1H8Line])
+                    this.getDiagonalH1A8Attack(i)
+                        .or(this.getDiagonalA1H8Attack(i))
                         .and(
-                            this.position.blackQueen
-                                .or(this.position.whiteQueen)
-                                .or(this.position.blackBishops)
-                                .or(this.position.whiteBishops)
+                            this.position.queen.black
+                                .or(this.position.queen.white)
+                                .or(this.position.bishops.black)
+                                .or(this.position.bishops.white)
                         )
                 );
         }
     }
 
-    private getWhitePosition(): long {
-        return this.position.whiteBishops
-            .or(this.position.whiteKing)
-            .or(this.position.whiteKnights)
-            .or(this.position.whitePawns)
-            .or(this.position.whiteQueen)
-            .or(this.position.whiteRooks);
+    private getPosition(color: 'white' | 'black'): long {
+        return this.position.bishops[color]
+            .or(this.position.king[color])
+            .or(this.position.knights[color])
+            .or(this.position.pawns[color])
+            .or(this.position.queen[color])
+            .or(this.position.rooks[color]);
     }
 
-    private getBlackPosition(): long {
-        return this.position.blackBishops
-            .or(this.position.blackKing)
-            .or(this.position.blackKnights)
-            .or(this.position.blackPawns)
-            .or(this.position.blackQueen)
-            .or(this.position.blackRooks);
-    }
-
-    private getPosition(): long {
-        return this.getBlackPosition().or(this.getWhitePosition());
+    private getPositionForAll(): long {
+        return this.getPosition('black').or(this.getPosition('white'));
     }
 }
 

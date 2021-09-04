@@ -19,30 +19,30 @@ const getPieceFromPosition = (
     position: Position,
     cellBitboard: long
 ): Piece | undefined => {
-    if (!position.blackPawns.and(cellBitboard).isZero())
+    if (!position.pawns.black.and(cellBitboard).isZero())
         return { type: 'pawn', color: 'black' };
-    if (!position.blackRooks.and(cellBitboard).isZero())
+    if (!position.rooks.black.and(cellBitboard).isZero())
         return { type: 'rook', color: 'black' };
-    if (!position.blackBishops.and(cellBitboard).isZero())
+    if (!position.bishops.black.and(cellBitboard).isZero())
         return { type: 'bishop', color: 'black' };
-    if (!position.blackKnights.and(cellBitboard).isZero())
+    if (!position.knights.black.and(cellBitboard).isZero())
         return { type: 'knight', color: 'black' };
-    if (!position.blackKing.and(cellBitboard).isZero())
+    if (!position.king.black.and(cellBitboard).isZero())
         return { type: 'king', color: 'black' };
-    if (!position.blackQueen.and(cellBitboard).isZero())
+    if (!position.queen.black.and(cellBitboard).isZero())
         return { type: 'queen', color: 'black' };
 
-    if (!position.whitePawns.and(cellBitboard).isZero())
+    if (!position.pawns.white.and(cellBitboard).isZero())
         return { type: 'pawn', color: 'white' };
-    if (!position.whiteRooks.and(cellBitboard).isZero())
+    if (!position.rooks.white.and(cellBitboard).isZero())
         return { type: 'rook', color: 'white' };
-    if (!position.whiteBishops.and(cellBitboard).isZero())
+    if (!position.bishops.white.and(cellBitboard).isZero())
         return { type: 'bishop', color: 'white' };
-    if (!position.whiteKnights.and(cellBitboard).isZero())
+    if (!position.knights.white.and(cellBitboard).isZero())
         return { type: 'knight', color: 'white' };
-    if (!position.whiteKing.and(cellBitboard).isZero())
+    if (!position.king.white.and(cellBitboard).isZero())
         return { type: 'king', color: 'white' };
-    if (!position.whiteQueen.and(cellBitboard).isZero())
+    if (!position.queen.white.and(cellBitboard).isZero())
         return { type: 'queen', color: 'white' };
 
     return undefined;

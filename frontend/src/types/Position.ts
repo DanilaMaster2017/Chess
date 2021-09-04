@@ -1,16 +1,11 @@
 import long from 'long';
+import { Players } from './Players';
 
 export interface Position {
-    whitePawns: long;
-    whiteKnights: long;
-    whiteRooks: long;
-    whiteBishops: long;
-    whiteQueen: long;
-    whiteKing: long;
-    blackPawns: long;
-    blackKnights: long;
-    blackRooks: long;
-    blackBishops: long;
-    blackQueen: long;
-    blackKing: long;
+    pawns: Players;
+    knights: Players;
+    rooks: Players;
+    bishops: Players;
+    queen: Players;
+    king: Players;
 }
