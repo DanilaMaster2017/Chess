@@ -247,13 +247,13 @@ class ChessEngine implements IChessEngine {
 
         rowIncrement = 28;
         for (let i = 0; i < numberOfCellsInRow; i++) {
-            let index = numberOfCells * i + rowIncrement;
+            let index = numberOfCellsInRow * i + rowIncrement;
 
             for (let j = 0; j < numberOfCellsInRow; j++) {
                 let cellIncrement;
 
                 if (i <= j) {
-                    cellIncrement = 7 - (i + j);
+                    cellIncrement = 7 + i - j;
                 } else {
                     cellIncrement = 8 - i + j;
                 }
