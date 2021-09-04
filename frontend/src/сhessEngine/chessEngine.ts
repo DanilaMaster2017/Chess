@@ -633,21 +633,94 @@ class ChessEngine implements IChessEngine {
                 this.diagonalH1A8Attacks.push(attacksFromPosition);
             }
         }
-    }
 
-    getPossibleMoves(cell: number, piece: Piece): long {
-        return long.ZERO;
-    }
+        for (let i = 0; i < numberOfCellsInRow; i++) {
+            for (let j = 0; j < numberOfCellsInRow; j++) {
+                const piecePosition: number = i * numberOfCellsInRow + j;
 
-    async getComputerMove(position: Position): Promise<Position> {
-        return position;
-    }
+                let minus1Attack: long = long.ZERO;
+                for (let k = 0; k < j; k++) {
+                    minus1Attack = minus1Attack.or(
+                        this.setMask[piecePosition - k - 1]
+                    );
+                }
+                this.minus1.push(minus1Attack);
 
-    private сalculateAttacksTo(): void {
-        for (let i = 0; i < numberOfCells; i++) {
-            let line = 0x11111111;
-            let row: number = Math.floor(i / numberOfCellsInRow);
-            let column = i % numberOfCellsInRow;
+                let minus7Attack: long = long.ZERO;
+                for (let k = 0; k < i && k < numberOfCellsInRow - 1 - j; k++) {
+                    minus7Attack = minus7Attack.or(
+                        this.setMask[
+                            piecePosition - (k + 1) * (numberOfCellsInRow - 1)
+                        ]
+                    );
+                }
+                this.minus7.push(minus7Attack);
+
+                let minus8Attack: long = long.ZERO;
+                for (let k = 0; k < i; k++) {
+                    minus8Attack = minus8Attack.or(
+                        this.setMask[
+                            piecePosition - (k + 1) * numberOfCellsInRow
+                        ]
+                    );
+                }
+                this.minus8.push(minus8Attack);
+
+                let minus9Attack: long = long.ZERO;
+                for (let k = 0; k < i && k < j; k++) {
+                    minus9Attack = minus9Attack.or(
+                        this.setMask[
+                            piecePosition - (k + 1) * (numberOfCellsInRow + 1)
+                        ]
+                    );
+                }
+                this.minus9.push(minus9Attack);
+
+                let plus1Attack: long = long.ZERO;
+                for (let k = 0; k < numberOfCellsInRow - 1 - j; k++) {
+                    plus1Attack = plus1Attack.or(
+                        this.setMask[piecePosition + k + 1]
+                    );
+    }
+                this.plus1.push(plus1Attack);
+
+                let plus7Attack: long = long.ZERO;
+                for (let k = 0; k < numberOfCellsInRow - 1 - i && k < j; k++) {
+                    plus7Attack = plus7Attack.or(
+                        this.setMask[
+                            piecePosition + (k + 1) * (numberOfCellsInRow - 1)
+                        ]
+                    );
+    }
+                this.plus7.push(plus7Attack);
+
+                let plus8Attack: long = long.ZERO;
+                for (let k = 0; k < numberOfCellsInRow - 1 - i; k++) {
+                    plus8Attack = plus8Attack.or(
+                        this.setMask[
+                            piecePosition + (k + 1) * numberOfCellsInRow
+                        ]
+                    );
+    }
+                this.plus8.push(plus8Attack);
+
+                let plus9Attack: long = long.ZERO;
+                for (
+                    let k = 0;
+                    k < numberOfCellsInRow - 1 - i &&
+                    k < numberOfCellsInRow - 1 - j;
+                    k++
+                ) {
+                    plus9Attack = plus9Attack.or(
+                        this.setMask[
+                            piecePosition + (k + 1) * (numberOfCellsInRow + 1)
+                        ]
+                    );
+                }
+                this.plus9.push(plus9Attack);
+            }
+        }
+    }
 
     private getVerticalAttack(from: number): long {
         const line = 0x11111111;
