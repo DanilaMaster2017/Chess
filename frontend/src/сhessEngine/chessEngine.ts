@@ -29,6 +29,7 @@ const enemy: Players = {
 
 const numberOfCells = 64;
 const numberOfCellsInRow = 8;
+const maxSixBitValue = 0b111111;
 
 const notA: long = new long(0xfefefefe, 0xfefefefe);
 const notAB: long = new long(0xfcfcfcfc, 0xfcfcfcfc);
@@ -293,6 +294,26 @@ class ChessEngine implements IChessEngine {
             black: this.setMask[61].or(this.setMask[62]),
         };
 
+        for (let i = 0; i < numberOfCellsInRow; i++) {
+            this.pawnsMoves.black.moves[i] = long.ZERO;
+            this.pawnsMoves.white.moves[i] = long.ZERO;
+
+            this.pawnsMoves.black.attacks[i] = long.ZERO;
+            this.pawnsMoves.white.attacks[i] = long.ZERO;
+
+            this.pawnsMoves.black.aisles[i] = long.ZERO;
+            this.pawnsMoves.white.aisles[i] = long.ZERO;
+
+            this.pawnsMoves.black.moves[numberOfCells - 1 - i] = long.ZERO;
+            this.pawnsMoves.white.moves[numberOfCells - 1 - i] = long.ZERO;
+
+            this.pawnsMoves.black.attacks[numberOfCells - 1 - i] = long.ZERO;
+            this.pawnsMoves.white.attacks[numberOfCells - 1 - i] = long.ZERO;
+
+            this.pawnsMoves.black.aisles[numberOfCells - 1 - i] = long.ZERO;
+            this.pawnsMoves.white.aisles[numberOfCells - 1 - i] = long.ZERO;
+        }
+
         for (
             let i = numberOfCellsInRow;
             i < numberOfCells - numberOfCellsInRow;
@@ -367,72 +388,49 @@ class ChessEngine implements IChessEngine {
         resetBitsBefore.push(0b1111111);
 
         for (let i = 0; i < numberOfCells; i++) {
-            const horizontalAttacksFromPosition: long[] = [];
-            const verticalAttacksFromPosition: long[] = [];
+            const attacksFromPosition: long[] = [];
 
-            for (let bits = 0; bits < 64; bits++) {
-                let lineOfAttaсkHorizontal: number = 0b11111111;
-                let lineOfAttaсkVertical: number = 0b11111111;
+            for (let bits = 0; bits < maxSixBitValue + 1; bits++) {
+                let lineOfAttaсk: number = 0b11111111;
 
-                let pieceAfterPositionHorizontal: number = 0;
-                let pieceBeforePositionHorizontal: number = 0;
-                let pieceAfterPositionVertical: number = 0;
-                let pieceBeforePositionVertical: number = 0;
+                let pieceAfterPosition: number = 0;
+                let pieceBeforePosition: number = 0;
 
                 let placementInLine = bits;
                 let index: number = 1;
 
-                while (
-                    placementInLine &&
-                    (!pieceBeforePositionHorizontal ||
-                        !pieceBeforePositionVertical)
-                ) {
+                while (placementInLine && !pieceBeforePosition) {
                     if (placementInLine % 2) {
                         if (
                             index <
                             numberOfCellsInRow - 1 - (i % numberOfCellsInRow)
                         ) {
-                            pieceAfterPositionHorizontal = index;
+                            pieceAfterPosition = index;
                         } else if (
                             index >
                             numberOfCellsInRow - 1 - (i % numberOfCellsInRow)
                         ) {
-                            pieceBeforePositionHorizontal = index;
-                        }
-
-                        if (index < Math.floor(i / numberOfCellsInRow)) {
-                            pieceAfterPositionVertical = index;
-                        } else if (index > Math.floor(i / numberOfCellsInRow)) {
-                            pieceBeforePositionVertical = index;
+                            pieceBeforePosition = index;
                         }
                     }
                     placementInLine >>= 1;
                     index++;
                 }
 
-                lineOfAttaсkHorizontal &= resetBit[i % numberOfCellsInRow];
-                lineOfAttaсkHorizontal &=
-                    resetBitsAfter[pieceAfterPositionHorizontal - 1];
-                lineOfAttaсkHorizontal &=
-                    resetBitsBefore[pieceBeforePositionHorizontal - 1];
+                lineOfAttaсk &= resetBit[i % numberOfCellsInRow];
 
-                lineOfAttaсkVertical &=
-                    resetBit[
-                        numberOfCellsInRow -
-                            1 -
-                            Math.floor(i / numberOfCellsInRow)
-                    ];
-                lineOfAttaсkVertical &=
-                    resetBitsAfter[pieceAfterPositionVertical - 1];
-                lineOfAttaсkVertical &=
-                    resetBitsBefore[pieceBeforePositionVertical - 1];
+                if (pieceAfterPosition) {
+                    lineOfAttaсk &= resetBitsAfter[pieceAfterPosition - 1];
+                }
+                if (pieceBeforePosition) {
+                    lineOfAttaсk &= resetBitsBefore[pieceBeforePosition - 1];
+                }
 
-                let horizontalAttack: long = long.ZERO;
-                let verticalAttack: long = long.ZERO;
+                let attack: long = long.ZERO;
 
                 for (let k = 0; k < numberOfCellsInRow; k++) {
-                    if (lineOfAttaсkHorizontal % 2) {
-                        horizontalAttack = horizontalAttack.or(
+                    if (lineOfAttaсk % 2) {
+                        attack = attack.or(
                             this.setMask[
                                 Math.floor(i / numberOfCellsInRow) *
                                     numberOfCellsInRow +
@@ -443,8 +441,56 @@ class ChessEngine implements IChessEngine {
                         );
                     }
 
-                    if (lineOfAttaсkVertical % 2) {
-                        verticalAttack = verticalAttack.or(
+                    lineOfAttaсk >>= 1;
+                }
+
+                attacksFromPosition.push(attack);
+            }
+            this.horizontalAttacks.push(attacksFromPosition);
+        }
+
+        for (let i = 0; i < numberOfCells; i++) {
+            const attacksFromPosition: long[] = [];
+
+            for (let bits = 0; bits < maxSixBitValue + 1; bits++) {
+                let lineOfAttaсk: number = 0b11111111;
+
+                let pieceAfterPosition: number = 0;
+                let pieceBeforePosition: number = 0;
+
+                let placementInLine = bits;
+                let index: number = 1;
+
+                while (placementInLine && !pieceBeforePosition) {
+                    if (placementInLine % 2) {
+                        if (index < Math.floor(i / numberOfCellsInRow)) {
+                            pieceAfterPosition = index;
+                        } else if (index > Math.floor(i / numberOfCellsInRow)) {
+                            pieceBeforePosition = index;
+                        }
+                    }
+                    placementInLine >>= 1;
+                    index++;
+                }
+
+                lineOfAttaсk &=
+                    resetBit[
+                        numberOfCellsInRow -
+                            1 -
+                            Math.floor(i / numberOfCellsInRow)
+                    ];
+
+                if (pieceAfterPosition) {
+                    lineOfAttaсk &= resetBitsAfter[pieceAfterPosition - 1];
+                }
+                if (pieceBeforePosition) {
+                    lineOfAttaсk &= resetBitsBefore[pieceBeforePosition - 1];
+                }
+                let attack: long = long.ZERO;
+
+                for (let k = 0; k < numberOfCellsInRow; k++) {
+                    if (lineOfAttaсk % 2) {
+                        attack = attack.or(
                             this.setMask[
                                 k * numberOfCellsInRow +
                                     (i % numberOfCellsInRow)
@@ -452,21 +498,18 @@ class ChessEngine implements IChessEngine {
                         );
                     }
 
-                    lineOfAttaсkHorizontal >>= 1;
-                    lineOfAttaсkVertical >>= 1;
+                    lineOfAttaсk >>= 1;
                 }
 
-                horizontalAttacksFromPosition.push(horizontalAttack);
-                verticalAttacksFromPosition.push(verticalAttack);
+                attacksFromPosition.push(attack);
             }
-            this.horizontalAttacks.push(horizontalAttacksFromPosition);
-            this.verticalAttacks.push(verticalAttacksFromPosition);
+            this.verticalAttacks.push(attacksFromPosition);
         }
 
         for (let i = 0; i < numberOfCellsInRow; i++) {
             for (let j = 0; j < numberOfCellsInRow; j++) {
                 const attacksFromPosition: long[] = [];
-                for (let bits = 0; bits < 64; bits++) {
+                for (let bits = 0; bits < maxSixBitValue + 1; bits++) {
                     let lineOfAttaсk: number = 0b11111111;
 
                     let pieceAfterPosition: number = 0;
@@ -501,8 +544,13 @@ class ChessEngine implements IChessEngine {
                         lineOfAttaсk &= resetBit[j];
                     }
 
-                    lineOfAttaсk &= resetBitsAfter[pieceAfterPosition - 1];
-                    lineOfAttaсk &= resetBitsBefore[pieceBeforePosition - 1];
+                    if (pieceAfterPosition) {
+                        lineOfAttaсk &= resetBitsAfter[pieceAfterPosition - 1];
+                    }
+                    if (pieceBeforePosition) {
+                        lineOfAttaсk &=
+                            resetBitsBefore[pieceBeforePosition - 1];
+                    }
 
                     let attack = long.ZERO;
 
@@ -534,14 +582,14 @@ class ChessEngine implements IChessEngine {
                     }
                     attacksFromPosition.push(attack);
                 }
-                this.diagonalA1H8Attacks.push(attacksFromPosition);
+                this.diagonalH1A8Attacks.push(attacksFromPosition);
             }
         }
 
         for (let i = 0; i < numberOfCellsInRow; i++) {
             for (let j = 0; j < numberOfCellsInRow; j++) {
                 const attacksFromPosition: long[] = [];
-                for (let bits = 0; bits < 64; bits++) {
+                for (let bits = 0; bits < maxSixBitValue + 1; bits++) {
                     let lineOfAttaсk: number = 0b11111111;
 
                     let pieceAfterPosition: number = 0;
@@ -576,8 +624,13 @@ class ChessEngine implements IChessEngine {
                         lineOfAttaсk &= resetBit[i];
                     }
 
-                    lineOfAttaсk &= resetBitsAfter[pieceAfterPosition - 1];
-                    lineOfAttaсk &= resetBitsBefore[pieceBeforePosition - 1];
+                    if (pieceAfterPosition) {
+                        lineOfAttaсk &= resetBitsAfter[pieceAfterPosition - 1];
+                    }
+                    if (pieceBeforePosition) {
+                        lineOfAttaсk &=
+                            resetBitsBefore[pieceBeforePosition - 1];
+                    }
 
                     let attack = long.ZERO;
 
@@ -612,7 +665,7 @@ class ChessEngine implements IChessEngine {
                     }
                     attacksFromPosition.push(attack);
                 }
-                this.diagonalH1A8Attacks.push(attacksFromPosition);
+                this.diagonalA1H8Attacks.push(attacksFromPosition);
             }
         }
 
@@ -702,15 +755,17 @@ class ChessEngine implements IChessEngine {
                 this.plus9.push(plus9Attack);
             }
         }
+
+        this.сalculateAttacksTo();
     }
 
     private getVerticalAttack(from: number): long {
-        const line = 0x11111111;
+        const line = maxSixBitValue;
         const column = from % numberOfCellsInRow;
 
         const verticalLine: number = this.positionRotatedLeft90
             .shiftRightUnsigned(
-                (numberOfCellsInRow - 1 - column) * numberOfCellsInRow
+                (numberOfCellsInRow - 1 - column) * numberOfCellsInRow + 1
             )
             .and(line)
             .getLowBitsUnsigned();
@@ -719,12 +774,12 @@ class ChessEngine implements IChessEngine {
     }
 
     private getHorizontalAttack(from: number): long {
-        const line = 0x11111111;
+        const line = maxSixBitValue;
         const row: number = Math.floor(from / numberOfCellsInRow);
 
         const horizontalLine: number = this.getPositionForAll()
             .shiftRightUnsigned(
-                (numberOfCellsInRow - 1 - row) * numberOfCellsInRow
+                (numberOfCellsInRow - 1 - row) * numberOfCellsInRow + 1
             )
             .and(line)
             .getLowBitsUnsigned();
@@ -733,17 +788,17 @@ class ChessEngine implements IChessEngine {
     }
 
     private getDiagonalH1A8Attack(from: number): long {
-        const line = 0x11111111;
+        const line = maxSixBitValue;
         const column = from % numberOfCellsInRow;
         const row: number = Math.floor(from / numberOfCellsInRow);
 
         let shift: number = 0;
-        if (row + column > 5) {
-            const number = 14 - row - column;
-            shift = ((2 + number - 1) / 2) * number;
+        if (row - column > -2) {
+            const number = 14 - row - (numberOfCellsInRow - 1 - column);
+            shift = ((2 + number - 1) / 2) * number + 1;
         } else {
-            const number = 6 - row - column;
-            shift = 36 + ((14 - number + 1) / 2) * number;
+            const number = 6 - row - (numberOfCellsInRow - 1 - column);
+            shift = 37 + ((14 - number + 1) / 2) * number;
         }
 
         const diagonalH1A8Line: number = this.positionRotatedLeft45
@@ -755,21 +810,17 @@ class ChessEngine implements IChessEngine {
     }
 
     private getDiagonalA1H8Attack(from: number): long {
-        const line = 0x11111111;
+        const line = maxSixBitValue;
         const column = from % numberOfCellsInRow;
         const row: number = Math.floor(from / numberOfCellsInRow);
 
         let shift: number = 0;
         if (row >= column) {
             const number = 7 - row + column;
-            shift = ((2 + number - 1) / 2) * number;
+            shift = ((2 + number - 1) / 2) * number + 1;
         } else {
             const number = column - row;
-            shift = 28 + ((16 - number + 1) / 2) * number;
-        }
-
-        for (let j = 0; j < numberOfCellsInRow - 1 - row + column; j++) {
-            shift += numberOfCellsInRow - Math.abs(numberOfCellsInRow - 1 - j);
+            shift = 29 + ((16 - number + 1) / 2) * number;
         }
 
         const diagonalA1H8Line: number = this.positionRotatedRight45
@@ -802,11 +853,11 @@ class ChessEngine implements IChessEngine {
         let enemyPosition = this.getPosition(enemy[color]);
         const allPostion = myPosition.or(enemyPosition);
 
-        const notSelfPieces: long = myPosition.negate();
+        const notSelfPieces: long = myPosition.not();
         const sign = color === 'white' ? 1 : -1;
 
         let pawnMove = (this.pawnsMoves[color] as PawnsMoves).moves[from].and(
-            allPostion.negate()
+            allPostion.not()
         );
 
         const pawnAisle = (this.pawnsMoves[color] as PawnsMoves).aisles[from];
@@ -836,16 +887,12 @@ class ChessEngine implements IChessEngine {
 
             case DirectionOfAttack.diagonalH1A8:
                 return pawnAttack.and(
-                    this.setMask[
-                        from + sign * (numberOfCellsInRow - 1)
-                    ].negate()
+                    this.setMask[from + sign * (numberOfCellsInRow - 1)].not()
                 );
 
             case DirectionOfAttack.diagonalA1H8:
                 return pawnAttack.and(
-                    this.setMask[
-                        from + sign * (numberOfCellsInRow + 1)
-                    ].negate()
+                    this.setMask[from + sign * (numberOfCellsInRow + 1)].not()
                 );
         }
 
@@ -856,7 +903,7 @@ class ChessEngine implements IChessEngine {
         return pawnMove.or(pawnAttack);
     }
     private getKnightAttacks(from: number, color: 'white' | 'black'): long {
-        const notSelfPieces: long = this.getPosition(color).negate();
+        const notSelfPieces: long = this.getPosition(color).not();
 
         if (this.isLocked(from, color, notSelfPieces)) {
             return long.ZERO;
@@ -869,7 +916,7 @@ class ChessEngine implements IChessEngine {
         return this.knightsAttacks[from].and(notSelfPieces);
     }
     private getRookAttacks(from: number, color: 'white' | 'black'): long {
-        const notSelfPieces: long = this.getPosition(color).negate();
+        const notSelfPieces: long = this.getPosition(color).not();
 
         const horizontalAttack = this.getHorizontalAttack(from);
         const verticalAttack = this.getVerticalAttack(from);
@@ -902,7 +949,7 @@ class ChessEngine implements IChessEngine {
     }
 
     private getBishopAttacks(from: number, color: 'white' | 'black'): long {
-        const notSelfPieces: long = this.getPosition(color).negate();
+        const notSelfPieces: long = this.getPosition(color).not();
 
         const h1A8Attack = this.getDiagonalH1A8Attack(from);
         const a1h8Attack = this.getDiagonalA1H8Attack(from);
@@ -937,7 +984,7 @@ class ChessEngine implements IChessEngine {
     }
 
     private getQueenAttacks(from: number, color: 'white' | 'black'): long {
-        const notSelfPieces: long = this.getPosition(color).negate();
+        const notSelfPieces: long = this.getPosition(color).not();
 
         const horizontalAttack = this.getHorizontalAttack(from);
         const verticalAttack = this.getVerticalAttack(from);
@@ -977,7 +1024,7 @@ class ChessEngine implements IChessEngine {
         return queenAttack.and(notSelfPieces);
     }
     private getKingAttacks(from: number, color: 'white' | 'black'): long {
-        const notSelfPieces: long = this.getPosition(color).negate();
+        const notSelfPieces: long = this.getPosition(color).not();
         let kingAttacks = this.kingAttacks[from];
 
         const row = Math.floor(from / numberOfCellsInRow);
@@ -994,7 +1041,7 @@ class ChessEngine implements IChessEngine {
 
                 const index = i * numberOfCellsInRow + j;
                 if (!this.attacksTo[index].isZero()) {
-                    kingAttacks = kingAttacks.and(this.setMask[index].negate());
+                    kingAttacks = kingAttacks.and(this.setMask[index].not());
                 }
             }
         }
