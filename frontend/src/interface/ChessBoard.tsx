@@ -1,18 +1,21 @@
 /** @jsxRuntime classic */
 /** @jsx jsx */
 import { css, jsx } from '@emotion/react';
-import { FC } from 'react';
+import { FC, useState } from 'react';
 import { Cell } from './Cell';
 import { useInfoContext } from './InfoContext';
 import { Piece } from '../types/Piece';
 import long from 'long';
 import { Position } from '../types/Position';
+import { CellStatus } from '../types/CellStatus';
+import { chessEngine } from '../сhessEngine/chessEngine';
 
 const letters = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
 
 interface Props {
     gamerColor: 'white' | 'black';
     position: Position;
+    onPieceMove: () => void;
 }
 
 const getPieceFromPosition = (
@@ -48,62 +51,109 @@ const getPieceFromPosition = (
     return undefined;
 };
 
-const generateCells = (
-    position: Position,
-    color: 'white' | 'black',
-    isReverse: boolean
-) => {
+export const ChessBoard: FC<Props> = ({
+    gamerColor,
+    position,
+    onPieceMove,
+}) => {
+    const { isReverse, whoseMove } = useInfoContext();
+    const [track, setTrack] = useState<long>(long.ZERO);
+    const [lastMove, setLastMove] = useState<long>(long.ZERO);
+    const [activeCell, setActiveCell] = useState<number>(-1);
+
     const cells = [];
-    const boardSize = letters.length - 1;
+    const boardSize = letters.length;
 
     let start: number;
     let end: number;
     let increment: number;
     let cellBitboard: long;
 
-    if ((color === 'black' && !isReverse) || (color === 'white' && isReverse)) {
+    const boardSide =
+        (gamerColor === 'black' && !isReverse) ||
+        (gamerColor === 'white' && isReverse);
+
+    if (boardSide) {
         start = 0;
         end = boardSize;
         increment = 1;
 
-        cellBitboard = long.ONE.shiftLeft(63);
+        cellBitboard = long.ONE.shiftLeft(boardSize * boardSize - 1);
     } else {
-        start = boardSize;
-        end = 0;
+        start = boardSize - 1;
+        end = -1;
         increment = -1;
 
         cellBitboard = long.ONE;
     }
 
-    for (let i = start; i !== end + increment; i += increment) {
-        for (let j = start; j !== end + increment; j += increment) {
+    let selectPieceClick;
+    let notValidClick;
+
+    for (let i = start; i !== end; i += increment) {
+        for (let j = start; j !== end; j += increment) {
+            const piece = getPieceFromPosition(position, cellBitboard);
+            const cellNumber = i * boardSize + j;
+
+            if (whoseMove === 'player') {
+                notValidClick = () => {
+                    setTrack(long.ZERO);
+                    setActiveCell(-1);
+                };
+
+                selectPieceClick = () => {
+                    setActiveCell(cellNumber);
+                    setTrack(chessEngine.getPossibleMoves(cellNumber, piece!));
+                };
+            }
+
+            let status: CellStatus = 0;
+
+            if (activeCell === i * boardSize + j) status |= CellStatus.active;
+            if (!track.and(cellBitboard).isZero())
+                status |= CellStatus.tracking;
+            if (!lastMove.and(cellBitboard).isZero())
+                status |= CellStatus.lastMove;
+
+            let onClick;
+            if (
+                piece &&
+                piece.color === gamerColor &&
+                cellNumber !== activeCell
+            ) {
+                onClick = selectPieceClick;
+            } else if (status & CellStatus.tracking) {
+                onClick = onPieceMove;
+            } else {
+                onClick = notValidClick;
+            }
+
             cells.push(
                 <Cell
-                    piece={getPieceFromPosition(position, cellBitboard)}
+                    onClick={onClick}
+                    piece={piece}
+                    status={status}
                     key={i + ' ' + j}
                     x={j}
                     y={i}
-                    letter={end - i === 0 ? letters[boardSize - j] : undefined}
-                    digit={end - j === 0 ? (i + 1).toString() : undefined}
+                    letter={
+                        end - increment === i
+                            ? letters[boardSize - 1 - j]
+                            : undefined
+                    }
+                    digit={
+                        end - increment === j ? (i + 1).toString() : undefined
+                    }
                 ></Cell>
             );
 
-            if (
-                (color === 'black' && !isReverse) ||
-                (color === 'white' && isReverse)
-            ) {
+            if (boardSide) {
                 cellBitboard = cellBitboard.shiftRightUnsigned(1);
             } else {
                 cellBitboard = cellBitboard.shiftLeft(1);
             }
         }
     }
-
-    return cells;
-};
-
-export const ChessBoard: FC<Props> = ({ gamerColor, position }) => {
-    const { isReverse } = useInfoContext();
 
     return (
         <div
@@ -115,7 +165,7 @@ export const ChessBoard: FC<Props> = ({ gamerColor, position }) => {
                 box-shadow: 2px 2px 6px rgba(0, 0, 0, 0.4);
             `}
         >
-            {generateCells(position, gamerColor, isReverse)}
+            {cells}
         </div>
     );
 };

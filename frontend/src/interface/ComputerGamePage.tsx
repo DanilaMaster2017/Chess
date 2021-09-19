@@ -59,6 +59,8 @@ export const ComputerGamePage: FC = () => {
         }
     }, []);
 
+    const onPieceMove = () => {};
+
     return (
         <Page>
             <div
@@ -76,6 +78,7 @@ export const ComputerGamePage: FC = () => {
                     `}
                 >
                     <ChessBoard
+                        onPieceMove={onPieceMove}
                         position={position}
                         gamerColor={playerInfo.color}
                     ></ChessBoard>
