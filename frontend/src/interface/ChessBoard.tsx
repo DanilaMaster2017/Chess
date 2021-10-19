@@ -9,60 +9,65 @@ import long from 'long';
 import { Position } from '../types/Position';
 import { CellStatus } from '../types/CellStatus';
 import { chessEngine } from '../сhessEngine/chessEngine';
+import { MoveContext } from './MoveContext';
+import { numberOfCells, sideSize } from '../constants/constants';
+import { PieceType } from '../types/PieceType';
+import { Move } from '../types/Move';
 
 const letters = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
 
 interface Props {
-    gamerColor: 'white' | 'black';
     position: Position;
-    onPieceMove: () => void;
+    onPieceMove: (move: Move) => void;
 }
 
 const getPieceFromPosition = (
     position: Position,
     cellBitboard: long
 ): Piece | undefined => {
-    if (!position.pawns.black.and(cellBitboard).isZero())
-        return { type: 'pawn', color: 'black' };
-    if (!position.rooks.black.and(cellBitboard).isZero())
-        return { type: 'rook', color: 'black' };
-    if (!position.bishops.black.and(cellBitboard).isZero())
-        return { type: 'bishop', color: 'black' };
-    if (!position.knights.black.and(cellBitboard).isZero())
-        return { type: 'knight', color: 'black' };
+    if (!position.pawn.black.and(cellBitboard).isZero())
+        return { type: PieceType.pawn, color: 'black' };
+    if (!position.rook.black.and(cellBitboard).isZero())
+        return { type: PieceType.rook, color: 'black' };
+    if (!position.bishop.black.and(cellBitboard).isZero())
+        return { type: PieceType.bishop, color: 'black' };
+    if (!position.knight.black.and(cellBitboard).isZero())
+        return { type: PieceType.knight, color: 'black' };
     if (!position.king.black.and(cellBitboard).isZero())
-        return { type: 'king', color: 'black' };
+        return { type: PieceType.king, color: 'black' };
     if (!position.queen.black.and(cellBitboard).isZero())
-        return { type: 'queen', color: 'black' };
+        return { type: PieceType.queen, color: 'black' };
 
-    if (!position.pawns.white.and(cellBitboard).isZero())
-        return { type: 'pawn', color: 'white' };
-    if (!position.rooks.white.and(cellBitboard).isZero())
-        return { type: 'rook', color: 'white' };
-    if (!position.bishops.white.and(cellBitboard).isZero())
-        return { type: 'bishop', color: 'white' };
-    if (!position.knights.white.and(cellBitboard).isZero())
-        return { type: 'knight', color: 'white' };
+    if (!position.pawn.white.and(cellBitboard).isZero())
+        return { type: PieceType.pawn, color: 'white' };
+    if (!position.rook.white.and(cellBitboard).isZero())
+        return { type: PieceType.rook, color: 'white' };
+    if (!position.bishop.white.and(cellBitboard).isZero())
+        return { type: PieceType.bishop, color: 'white' };
+    if (!position.knight.white.and(cellBitboard).isZero())
+        return { type: PieceType.knight, color: 'white' };
     if (!position.king.white.and(cellBitboard).isZero())
-        return { type: 'king', color: 'white' };
+        return { type: PieceType.king, color: 'white' };
     if (!position.queen.white.and(cellBitboard).isZero())
-        return { type: 'queen', color: 'white' };
+        return { type: PieceType.queen, color: 'white' };
 
     return undefined;
 };
 
-export const ChessBoard: FC<Props> = ({
-    gamerColor,
-    position,
-    onPieceMove,
-}) => {
-    const { isReverse, whoseMove } = useInfoContext();
+export const ChessBoard: FC<Props> = ({ position, onPieceMove }) => {
+    const { isReverse, whoseMove, playerInfo } = useInfoContext();
     const [track, setTrack] = useState<long>(long.ZERO);
     const [lastMove, setLastMove] = useState<long>(long.ZERO);
     const [activeCell, setActiveCell] = useState<number>(-1);
+    const [activePiece, setActivePiece] = useState<Piece>();
+
+    const resetBoard = () => {
+        setTrack(long.ZERO);
+        setActiveCell(-1);
+        setActivePiece(undefined);
+    };
 
     const cells = [];
-    const boardSize = letters.length;
 
     let start: number;
     let end: number;
@@ -70,17 +75,17 @@ export const ChessBoard: FC<Props> = ({
     let cellBitboard: long;
 
     const boardSide =
-        (gamerColor === 'black' && !isReverse) ||
-        (gamerColor === 'white' && isReverse);
+        (playerInfo.color === 'black' && !isReverse) ||
+        (playerInfo.color === 'white' && isReverse);
 
     if (boardSide) {
         start = 0;
-        end = boardSize;
+        end = sideSize;
         increment = 1;
 
-        cellBitboard = long.ONE.shiftLeft(boardSize * boardSize - 1);
+        cellBitboard = long.ONE.shiftLeft(numberOfCells - 1);
     } else {
-        start = boardSize - 1;
+        start = sideSize - 1;
         end = -1;
         increment = -1;
 
@@ -88,28 +93,23 @@ export const ChessBoard: FC<Props> = ({
     }
 
     let selectPieceClick;
-    let notValidClick;
 
     for (let i = start; i !== end; i += increment) {
         for (let j = start; j !== end; j += increment) {
             const piece = getPieceFromPosition(position, cellBitboard);
-            const cellNumber = i * boardSize + j;
+            const cellNumber = i * sideSize + j;
 
             if (whoseMove === 'player') {
-                notValidClick = () => {
-                    setTrack(long.ZERO);
-                    setActiveCell(-1);
-                };
-
                 selectPieceClick = () => {
                     setActiveCell(cellNumber);
+                    setActivePiece(piece);
                     setTrack(chessEngine.getPossibleMoves(cellNumber, piece!));
                 };
             }
 
             let status: CellStatus = 0;
 
-            if (activeCell === i * boardSize + j) status |= CellStatus.active;
+            if (activeCell === i * sideSize + j) status |= CellStatus.active;
             if (!track.and(cellBitboard).isZero())
                 status |= CellStatus.tracking;
             if (!lastMove.and(cellBitboard).isZero())
@@ -118,27 +118,46 @@ export const ChessBoard: FC<Props> = ({
             let onClick;
             if (
                 piece &&
-                piece.color === gamerColor &&
+                piece.color === playerInfo.color &&
                 cellNumber !== activeCell
             ) {
                 onClick = selectPieceClick;
             } else if (status & CellStatus.tracking) {
-                onClick = onPieceMove;
+                onClick = () => {
+                    onPieceMove({
+                        from: activeCell,
+                        to: i * sideSize + j,
+                        piece: activePiece!,
+                        takenPiece: piece,
+                    });
+                };
             } else {
-                onClick = notValidClick;
+                onClick = resetBoard;
             }
 
             cells.push(
                 <Cell
-                    onClick={onClick}
                     piece={piece}
+                    onClick={onClick}
+                    resetBoard={() => {
+                        resetBoard();
+                        setLastMove(
+                            long.ONE.shiftLeft(
+                                numberOfCells - 1 - cellNumber
+                            ).or(
+                                long.ONE.shiftLeft(
+                                    numberOfCells - 1 - activeCell
+                                )
+                            )
+                        );
+                    }}
                     status={status}
-                    key={i + ' ' + j}
+                    key={'' + (i * sideSize + j)}
                     x={j}
                     y={i}
                     letter={
                         end - increment === i
-                            ? letters[boardSize - 1 - j]
+                            ? letters[sideSize - 1 - j]
                             : undefined
                     }
                     digit={
@@ -158,6 +177,7 @@ export const ChessBoard: FC<Props> = ({
     return (
         <div
             css={css`
+                position: relative;
                 margin: auto;
                 width: 52%;
                 display: flex;
@@ -165,7 +185,7 @@ export const ChessBoard: FC<Props> = ({
                 box-shadow: 2px 2px 6px rgba(0, 0, 0, 0.4);
             `}
         >
-            {cells}
+            <MoveContext>{cells}</MoveContext>
         </div>
     );
 };

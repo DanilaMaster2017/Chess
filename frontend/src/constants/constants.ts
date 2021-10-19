@@ -1,3 +1,5 @@
+export const sideSize = 8;
+export const numberOfCells = sideSize * sideSize;
 export const playMan = 'Создать игру';
 export const playFriend = 'Сыграть c другом';
 export const playComputer = 'Сыграть с компьютером';

@@ -9,18 +9,20 @@ import { chessEngine } from '../сhessEngine/chessEngine';
 import { useInfoContext } from './InfoContext';
 import { useGameSettingsContext } from './GameSettingsContext';
 import { Position } from '../types/Position';
+import { Move } from '../types/Move';
+import { convertToMove } from '../functions/convertToMove';
 
 export const ComputerGamePage: FC = () => {
     const [position, setPosition] = useState<Position>(chessEngine.position);
 
     const { color, level, getTimeForGame } = useGameSettingsContext();
     const {
-        playerInfo,
         setPlayerInfo,
         setEnemyInfo,
         setPlayerTimeLeft,
         setEnemyTimeLeft,
         setWhoseMove,
+        whoseMove,
     } = useInfoContext();
 
     useEffect(() => {
@@ -59,7 +61,27 @@ export const ComputerGamePage: FC = () => {
         }
     }, []);
 
-    const onPieceMove = () => {};
+    useEffect(() => {
+        if (whoseMove === 'enemy') {
+            const doGetComputerMove = async () => {
+                const codeOfMove = await chessEngine.getComputerMove(position);
+                const move: Move = convertToMove(codeOfMove);
+                //const newPosition = chessEngine.makeMove(move);
+
+                //setPosition(newPosition);
+                setWhoseMove('player');
+            };
+            doGetComputerMove();
+        }
+    }, [whoseMove]);
+
+    const onPieceMove = async (move: Move) => {
+        let newPosition: Position;
+
+        newPosition = chessEngine.makeMove(move);
+        setPosition(newPosition);
+        setWhoseMove('enemy');
+    };
 
     return (
         <Page>
@@ -80,7 +102,6 @@ export const ComputerGamePage: FC = () => {
                     <ChessBoard
                         onPieceMove={onPieceMove}
                         position={position}
-                        gamerColor={playerInfo.color}
                     ></ChessBoard>
                 </div>
                 <InfoBlock></InfoBlock>

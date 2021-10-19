@@ -1,4 +1,5 @@
+import { PieceType } from './PieceType';
 export interface Piece {
-    color : 'white' | 'black';
-    type: 'pawn' | 'knight' | 'rook' | 'bishop' | 'queen' | 'king'
+    color: 'white' | 'black';
+    type: PieceType;
 }

@@ -10,26 +10,39 @@ import blackBishop from '../images/chessPieces/bb.svg';
 import blackKnight from '../images/chessPieces/bn.svg';
 import blackKing from '../images/chessPieces/bk.svg';
 import blackQueen from '../images/chessPieces/bq.svg';
+import { PieceType } from '../types/PieceType';
 import { Piece } from '../types/Piece';
 
-export function getPieceImage(piece:Piece){
+export function getPieceImage(piece: Piece) {
     if (piece.color === 'white') {
-        switch(piece.type){
-            case 'pawn': return whitePawn;
-            case 'knight': return whiteKnight;
-            case 'rook': return whiteRook;
-            case 'bishop': return whiteBishop;
-            case 'king': return whiteKing;
-            case 'queen': return whiteQueen;
+        switch (piece.type) {
+            case PieceType.pawn:
+                return whitePawn;
+            case PieceType.knight:
+                return whiteKnight;
+            case PieceType.rook:
+                return whiteRook;
+            case PieceType.bishop:
+                return whiteBishop;
+            case PieceType.king:
+                return whiteKing;
+            case PieceType.queen:
+                return whiteQueen;
         }
     } else {
-        switch(piece.type){
-            case 'pawn': return blackPawn;
-            case 'knight': return blackKnight;
-            case 'rook': return blackRook;
-            case 'bishop': return blackBishop;
-            case 'king': return blackKing;
-            case 'queen': return blackQueen;
+        switch (piece.type) {
+            case PieceType.pawn:
+                return blackPawn;
+            case PieceType.knight:
+                return blackKnight;
+            case PieceType.rook:
+                return blackRook;
+            case PieceType.bishop:
+                return blackBishop;
+            case PieceType.king:
+                return blackKing;
+            case PieceType.queen:
+                return blackQueen;
         }
     }
 }
