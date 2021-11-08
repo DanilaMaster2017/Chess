@@ -23,6 +23,7 @@ export const ComputerGamePage: FC = () => {
         setEnemyTimeLeft,
         setWhoseMove,
         whoseMove,
+        setOnMove,
     } = useInfoContext();
 
     useEffect(() => {
@@ -59,6 +60,16 @@ export const ComputerGamePage: FC = () => {
             setPlayerTimeLeft(timeLeft);
             setEnemyTimeLeft(timeLeft);
         }
+
+        setOnMove(() => {
+            return async (move: Move) => {
+                let newPosition: Position;
+                newPosition = chessEngine.makeMove(move);
+                setPosition(newPosition);
+
+                setWhoseMove('enemy');
+            };
+        });
     }, []);
 
     useEffect(() => {
@@ -74,14 +85,6 @@ export const ComputerGamePage: FC = () => {
             doGetComputerMove();
         }
     }, [whoseMove]);
-
-    const onPieceMove = async (move: Move) => {
-        let newPosition: Position;
-
-        newPosition = chessEngine.makeMove(move);
-        setPosition(newPosition);
-        setWhoseMove('enemy');
-    };
 
     return (
         <Page>
@@ -99,10 +102,7 @@ export const ComputerGamePage: FC = () => {
                         height: 100%;
                     `}
                 >
-                    <ChessBoard
-                        onPieceMove={onPieceMove}
-                        position={position}
-                    ></ChessBoard>
+                    <ChessBoard position={position}></ChessBoard>
                 </div>
                 <InfoBlock></InfoBlock>
             </div>

@@ -1,7 +1,7 @@
 /** @jsxRuntime classic */
 /** @jsx jsx */
 import { css, jsx } from '@emotion/react';
-import React, { FC, useRef, useState, useEffect } from 'react';
+import React, { FC, useRef, useEffect } from 'react';
 import { Piece } from '../types/Piece';
 import { getPieceImage } from '../functions/getPieceImage';
 import { CellStatus } from '../types/CellStatus';
@@ -20,6 +20,7 @@ interface Props {
     digit?: string;
     x: number;
     y: number;
+    setLastMoveFromCell: () => void;
 }
 
 export const Cell: FC<Props> = ({
@@ -31,17 +32,28 @@ export const Cell: FC<Props> = ({
     digit,
     onClick,
     resetBoard,
+    setLastMoveFromCell,
 }) => {
     const pieceImage = useRef<HTMLImageElement | null>(null);
-    const [isHover, setIsHover] = useState<Boolean>(false);
-    const { playerInfo, isReverse } = useInfoContext();
+
+    const {
+        playerInfo,
+        isReverse,
+        onMove,
+        setLastMove,
+        whoseMove,
+    } = useInfoContext();
+
     const {
         onPieceMove,
         setOnPieceMove,
         castlingRooks,
         setCastlingRooks,
+        hoverCell,
+        setHoverCell,
     } = useMoveContext();
 
+    const cellNumber = x + y * sideSize;
     const boardOneEighth = 100 / sideSize;
     const backgroundColor = (x + y) % 2 ? '#B58863' : '#F0D9B5';
     const symbolСolor = (x + y) % 2 ? '#F0D9B5' : '#B58863';
@@ -77,16 +89,14 @@ export const Cell: FC<Props> = ({
     }, [left, top]);
 
     useEffect(() => {
-        const cell = x + y * sideSize;
-
-        if (cell === 0) {
+        if (cellNumber === 0) {
             setCastlingRooks((prev: Players) => {
                 return {
                     white: pieceImage,
                     black: prev.black,
                 };
             });
-        } else if (cell === 56) {
+        } else if (cellNumber === 56) {
             setCastlingRooks((prev: Players) => {
                 return {
                     white: prev.white,
@@ -96,14 +106,121 @@ export const Cell: FC<Props> = ({
         }
     }, []);
 
+    useEffect(() => {
+        if (pieceImage.current && piece?.color === playerInfo.color) {
+            if (whoseMove === 'player') {
+                pieceImage.current.onmousedown = (e) => {
+                    let isSameCell: boolean = true;
+
+                    if (!(status & CellStatus.active)) {
+                        onClick!();
+                    } else {
+                        isSameCell = false;
+                    }
+
+                    let originalStyle = getComputedStyle(pieceImage.current!);
+                    pieceImage.current!.style.opacity = '0.5';
+
+                    let dragablePieceImage = document.createElement('img');
+
+                    dragablePieceImage.src = pieceImage.current!.src;
+                    dragablePieceImage.style.position = 'absolute';
+                    dragablePieceImage.style.zIndex = '1000';
+                    dragablePieceImage.style.width = originalStyle.width;
+                    dragablePieceImage.style.height = originalStyle.height;
+                    dragablePieceImage.style.transition = 'none';
+                    dragablePieceImage.ondragstart = () => false;
+
+                    document.body.append(dragablePieceImage);
+
+                    const moveAt = (pageX: number, pageY: number) => {
+                        dragablePieceImage.style.left =
+                            pageX - dragablePieceImage.offsetWidth / 2 + 'px';
+                        dragablePieceImage.style.top =
+                            pageY - dragablePieceImage.offsetWidth / 2 + 'px';
+                    };
+
+                    moveAt(e.pageX, e.pageY);
+
+                    let hoverCell: HTMLDivElement | undefined | null;
+                    const onMouseMove = (e: MouseEvent) => {
+                        moveAt(e.pageX, e.pageY);
+
+                        dragablePieceImage.hidden = true;
+                        const elemBelow = document.elementFromPoint(
+                            e.clientX,
+                            e.clientY
+                        );
+                        dragablePieceImage.hidden = false;
+
+                        hoverCell = elemBelow?.closest('[id] .track');
+
+                        if (hoverCell) {
+                            setHoverCell(+hoverCell.id);
+                        } else {
+                            setHoverCell(-1);
+                        }
+
+                        const belowCell = elemBelow?.closest('[id]');
+                        if (belowCell && isSameCell) {
+                            isSameCell = +belowCell.id === cellNumber;
+                        } else {
+                            isSameCell = false;
+                        }
+                    };
+
+                    document.addEventListener('mousemove', onMouseMove);
+
+                    dragablePieceImage.onmouseup = function () {
+                        if (hoverCell) {
+                            let takenPiece: Piece | undefined;
+                            if (hoverCell.dataset.pieceType) {
+                                takenPiece = {
+                                    type: parseInt(hoverCell.dataset.pieceType),
+                                    color: hoverCell.dataset.pieceColor as
+                                        | 'white'
+                                        | 'black',
+                                };
+                            }
+
+                            onMove({
+                                from: cellNumber,
+                                to: +hoverCell.id,
+                                piece: piece!,
+                                takenPiece: takenPiece,
+                            });
+
+                            resetBoard();
+                            setLastMove(cellNumber, +hoverCell.id);
+                        } else if (isSameCell) {
+                            pieceImage.current!.style.opacity = '1';
+                        } else {
+                            pieceImage.current!.style.opacity = '1';
+                            resetBoard();
+                        }
+
+                        document.removeEventListener('mousemove', onMouseMove);
+
+                        dragablePieceImage.onmouseup = null;
+                        dragablePieceImage.remove();
+                    };
+                };
+            } else {
+                pieceImage.current.onmousedown = null;
+            }
+        }
+    }, [onMove, piece, setLastMove, whoseMove]);
+
     const onMouseEnter =
-        status & CellStatus.tracking ? () => setIsHover(true) : undefined;
+        status & CellStatus.tracking
+            ? () => setHoverCell(cellNumber)
+            : undefined;
     const onMouseLeave =
-        status & CellStatus.tracking ? () => setIsHover(false) : undefined;
+        status & CellStatus.tracking ? () => setHoverCell(-1) : undefined;
 
     useEffect(() => {
         if (!(status & CellStatus.tracking)) {
-            setIsHover(false);
+            setHoverCell(-1);
         }
     }, [status]);
 
@@ -137,6 +254,7 @@ export const Cell: FC<Props> = ({
     if (status & CellStatus.tracking) {
         onClickByCell = () => {
             resetBoard();
+            setLastMoveFromCell();
             onPieceMove(top, left);
             setTimeout(onClick!, 300);
         };
@@ -146,6 +264,10 @@ export const Cell: FC<Props> = ({
 
     return (
         <div
+            id={cellNumber.toString()}
+            className={status & CellStatus.tracking ? 'track' : ''}
+            data-piece-type={piece?.type}
+            data-piece-color={piece?.color}
             onClick={onClickByCell}
             onMouseLeave={onMouseLeave}
             onMouseEnter={onMouseEnter}
@@ -174,7 +296,7 @@ export const Cell: FC<Props> = ({
                         top: ${top};
                         left: ${left};
                         width: ${boardOneEighth}%;
-                        transition: all 0.3s linear;
+                        transition: top 0.3s linear, left 0.3s linear;
 
                         ${status & CellStatus.shah
                             ? `background: radial-gradient(
@@ -196,8 +318,12 @@ export const Cell: FC<Props> = ({
                     width: 100%;
                     height: 100%;
                     background-color: ${backlightColor};
-                    ${isHover ? `background-color: ${hoverColor};` : ''}
-                    ${status & CellStatus.tracking && piece && !isHover
+                    ${hoverCell === cellNumber
+                        ? `background-color: ${hoverColor};`
+                        : ''}
+                    ${status & CellStatus.tracking &&
+                    piece &&
+                    hoverCell !== cellNumber
                         ? `&:after {
                             content: "";
                             position: absolute;
@@ -238,17 +364,19 @@ export const Cell: FC<Props> = ({
                         {digit}
                     </span>
                 )}
-                {!!(status & CellStatus.tracking) && !piece && !isHover && (
-                    <div
-                        css={css`
-                            margin: auto;
-                            width: 25%;
-                            height: 25%;
-                            border-radius: 50%;
-                            background-color: ${trackingColor};
-                        `}
-                    ></div>
-                )}
+                {!!(status & CellStatus.tracking) &&
+                    !piece &&
+                    hoverCell !== cellNumber && (
+                        <div
+                            css={css`
+                                margin: auto;
+                                width: 25%;
+                                height: 25%;
+                                border-radius: 50%;
+                                background-color: ${trackingColor};
+                            `}
+                        ></div>
+                    )}
             </div>
         </div>
     );

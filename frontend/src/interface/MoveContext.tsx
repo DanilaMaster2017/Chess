@@ -12,6 +12,8 @@ interface IMoveContext {
     setOnPieceMove: (f: (top: string, left: string) => void) => void;
     castlingRooks: Players;
     setCastlingRooks: (castlingRook: SetStateAction<Players>) => void;
+    hoverCell: number;
+    setHoverCell: (h: number) => void;
 }
 
 const defaultCastlingRooks = {
@@ -26,6 +28,8 @@ const MoveContextProvider = createContext<IMoveContext>({
     setCastlingRooks: () => {
         return defaultCastlingRooks;
     },
+    hoverCell: -1,
+    setHoverCell: (n: number) => {},
 });
 
 export function useMoveContext() {
@@ -38,9 +42,12 @@ export const MoveContext: FC = ({ children }) => {
     >(() => {
         return (top: string, left: string) => {};
     });
+
     const [castlingRooks, setCastlingRooks] = useState<Players>(
         defaultCastlingRooks
     );
+
+    const [hoverCell, setHoverCell] = useState<number>(-1);
 
     return (
         <MoveContextProvider.Provider
@@ -49,6 +56,8 @@ export const MoveContext: FC = ({ children }) => {
                 setOnPieceMove,
                 castlingRooks,
                 setCastlingRooks,
+                hoverCell,
+                setHoverCell,
             }}
         >
             {children}

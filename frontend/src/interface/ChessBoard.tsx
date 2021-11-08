@@ -1,7 +1,7 @@
 /** @jsxRuntime classic */
 /** @jsx jsx */
 import { css, jsx } from '@emotion/react';
-import { FC, useState } from 'react';
+import { FC, useEffect, useState } from 'react';
 import { Cell } from './Cell';
 import { useInfoContext } from './InfoContext';
 import { Piece } from '../types/Piece';
@@ -12,13 +12,11 @@ import { chessEngine } from '../сhessEngine/chessEngine';
 import { MoveContext } from './MoveContext';
 import { numberOfCells, sideSize } from '../constants/constants';
 import { PieceType } from '../types/PieceType';
-import { Move } from '../types/Move';
 
 const letters = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
 
 interface Props {
     position: Position;
-    onPieceMove: (move: Move) => void;
 }
 
 const getPieceFromPosition = (
@@ -54,10 +52,17 @@ const getPieceFromPosition = (
     return undefined;
 };
 
-export const ChessBoard: FC<Props> = ({ position, onPieceMove }) => {
-    const { isReverse, whoseMove, playerInfo } = useInfoContext();
+export const ChessBoard: FC<Props> = ({ position }) => {
+    const {
+        isReverse,
+        whoseMove,
+        playerInfo,
+        onMove,
+        lastMove,
+        setLastMove,
+    } = useInfoContext();
+
     const [track, setTrack] = useState<long>(long.ZERO);
-    const [lastMove, setLastMove] = useState<long>(long.ZERO);
     const [activeCell, setActiveCell] = useState<number>(-1);
     const [activePiece, setActivePiece] = useState<Piece>();
 
@@ -124,7 +129,7 @@ export const ChessBoard: FC<Props> = ({ position, onPieceMove }) => {
                 onClick = selectPieceClick;
             } else if (status & CellStatus.tracking) {
                 onClick = () => {
-                    onPieceMove({
+                    onMove({
                         from: activeCell,
                         to: i * sideSize + j,
                         piece: activePiece!,
@@ -139,17 +144,9 @@ export const ChessBoard: FC<Props> = ({ position, onPieceMove }) => {
                 <Cell
                     piece={piece}
                     onClick={onClick}
-                    resetBoard={() => {
-                        resetBoard();
-                        setLastMove(
-                            long.ONE.shiftLeft(
-                                numberOfCells - 1 - cellNumber
-                            ).or(
-                                long.ONE.shiftLeft(
-                                    numberOfCells - 1 - activeCell
-                                )
-                            )
-                        );
+                    resetBoard={resetBoard}
+                    setLastMoveFromCell={() => {
+                        setLastMove(activeCell, cellNumber);
                     }}
                     status={status}
                     key={'' + (i * sideSize + j)}
