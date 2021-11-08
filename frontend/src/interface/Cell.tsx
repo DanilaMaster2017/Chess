@@ -50,10 +50,10 @@ export const Cell: FC<Props> = ({
 
     let backlightColor;
 
-    if (status & CellStatus.lastMove) {
-        backlightColor = 'rgba(155,199,0,0.41)';
-    } else if (status & CellStatus.active) {
+    if (status & CellStatus.active) {
         backlightColor = trackingColor;
+    } else if (status & CellStatus.lastMove) {
+        backlightColor = 'rgba(155,199,0,0.41)';
     } else {
         backlightColor = 'transparent';
     }
