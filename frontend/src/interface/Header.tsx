@@ -27,6 +27,9 @@ export const Header: FC = () => {
                     `}
                 >
                     <img
+                        onDragStart={(e) => {
+                            e.preventDefault();
+                        }}
                         css={css`
                             border-radius: 5px;
                             width: ${imgSize};

@@ -30,6 +30,9 @@ export const ColorButton: FC<Props> = ({ value, image, size, title }) => {
 
     return (
         <img
+            onDragStart={(e) => {
+                e.preventDefault();
+            }}
             src={image}
             onClick={onClick}
             alt=""

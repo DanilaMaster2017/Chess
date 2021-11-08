@@ -29,6 +29,9 @@ export const UserInfo: FC<Props> = ({
             `}
         >
             <img
+                onDragStart={(e) => {
+                    e.preventDefault();
+                }}
                 css={css`
                     width: ${imgSize};
                     height: ${imgSize};

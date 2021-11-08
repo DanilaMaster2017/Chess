@@ -165,6 +165,9 @@ export const Cell: FC<Props> = ({
             {piece && (
                 <img
                     ref={pieceImage}
+                    onDragStart={(e) => {
+                        e.preventDefault();
+                    }}
                     css={css`
                         position: absolute;
                         z-index: 1;

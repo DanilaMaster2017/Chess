@@ -67,6 +67,9 @@ export const Row: FC<Props> = ({ gameRequest, onClick }) => {
         >
             <Td>
                 <img
+                    onDragStart={(e) => {
+                        e.preventDefault();
+                    }}
                     css={css`
                         width: ${imageSize};
                         height: ${imageSize};
