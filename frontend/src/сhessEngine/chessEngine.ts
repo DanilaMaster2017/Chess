@@ -3,9 +3,15 @@ import { Piece } from '../types/Piece';
 import { Position } from '../types/Position';
 import { Players } from '../types/Players';
 import { numberOfCells, sideSize } from '../constants/constants';
-import { wait } from '../functions/wait';
 import { PieceType } from '../types/PieceType';
 import { Move } from '../types/Move';
+import { convertToMove } from '../functions/convertToMove';
+import { cloneObject } from '../functions/cloneObject';
+
+interface PruningResult {
+    alpha: number;
+    move?: Move;
+}
 
 interface PawnsMoves {
     attacks: long[];
@@ -13,11 +19,27 @@ interface PawnsMoves {
     aisles: long[];
 }
 
+interface Node {
+    position: AllPosition;
+    score: number;
+    attacksTo: long[];
+    shah: long;
+    isCastlingPossible: Players;
+    takingOnAisle: number | undefined;
+}
+
+interface AllPosition {
+    origin: Position;
+    rotatedLeft90: long;
+    rotatedLeft45: long;
+    rotatedRight45: long;
+}
+
 interface IChessEngine {
     position: Position;
-    getPossibleMoves: (cell: number, p: Piece) => long;
-    getComputerMove: (p: Position) => Promise<number>;
-    makeMove: (move: Move) => Position;
+    getPossibleMoves: (cell: number, p: Piece, node?: Node) => long;
+    getComputerMove: (color: 'white' | 'black') => Promise<Move>;
+    makeMove: (move: Move, node?: Node) => Position;
 }
 
 enum DirectionOfAttack {
@@ -25,6 +47,14 @@ enum DirectionOfAttack {
     vertical,
     diagonalH1A8,
     diagonalA1H8,
+}
+
+enum PieceValue {
+    pawn = 100,
+    queen = 1050,
+    rook = 550,
+    bishop = 325,
+    knight = 325,
 }
 
 const enemy: Players = {
@@ -41,6 +71,7 @@ const notGH: long = new long(0x3f3f3f3f, 0x3f3f3f3f);
 
 class ChessEngine implements IChessEngine {
     public position: Position;
+    private node: Node;
 
     private minus7: long[];
     private minus8: long[];
@@ -55,9 +86,7 @@ class ChessEngine implements IChessEngine {
     private setMaskRotatedLeft90: long[];
     private setMaskRotatedLeft45: long[];
     private setMaskRotatedRight45: long[];
-    private positionRotatedLeft90: long;
-    private positionRotatedLeft45: long;
-    private positionRotatedRight45: long;
+
     private kingAttacks: long[];
     private knightsAttacks: long[];
     private pawnsMoves: Players;
@@ -66,10 +95,6 @@ class ChessEngine implements IChessEngine {
     private diagonalH1A8Attacks: long[][];
     private diagonalA1H8Attacks: long[][];
 
-    private attacksTo: long[];
-    private shah: long;
-    private takingOnAisle: number | undefined;
-    private isCastlingPossible: Players;
     private isCastlingPossibleNow: Players;
     private castlingRooksPosition: Players;
 
@@ -93,13 +118,7 @@ class ChessEngine implements IChessEngine {
         this.verticalAttacks = [];
         this.diagonalH1A8Attacks = [];
         this.diagonalA1H8Attacks = [];
-        this.attacksTo = [];
 
-        this.positionRotatedLeft90 = long.ZERO;
-        this.positionRotatedLeft45 = long.ZERO;
-        this.positionRotatedRight45 = long.ZERO;
-
-        this.shah = long.ZERO;
         this.pawnsMoves = {
             white: { attacks: [], moves: [], aisles: [] },
             black: { attacks: [], moves: [], aisles: [] },
@@ -167,7 +186,8 @@ class ChessEngine implements IChessEngine {
                     .or(this.setMask[12])
                     .or(this.setMask[13])
                     .or(this.setMask[14])
-                    .or(this.setMask[15]),
+                    .or(this.setMask[15])
+                    .toUnsigned(),
                 black: this.setMask[48]
                     .or(this.setMask[49])
                     .or(this.setMask[50])
@@ -175,37 +195,55 @@ class ChessEngine implements IChessEngine {
                     .or(this.setMask[52])
                     .or(this.setMask[53])
                     .or(this.setMask[54])
-                    .or(this.setMask[55]),
+                    .or(this.setMask[55])
+                    .toUnsigned(),
             },
 
             knight: {
-                white: this.setMask[6].or(this.setMask[1]),
-                black: this.setMask[62].or(this.setMask[57]),
+                white: this.setMask[6].or(this.setMask[1]).toUnsigned(),
+                black: this.setMask[62].or(this.setMask[57]).toUnsigned(),
             },
 
             rook: {
-                white: this.setMask[7].or(this.setMask[0]),
-                black: this.setMask[63].or(this.setMask[56]),
+                white: this.setMask[7].or(this.setMask[0]).toUnsigned(),
+                black: this.setMask[63].or(this.setMask[56]).toUnsigned(),
             },
 
             bishop: {
-                white: this.setMask[5].or(this.setMask[2]),
-                black: this.setMask[61].or(this.setMask[58]),
+                white: this.setMask[5].or(this.setMask[2]).toUnsigned(),
+                black: this.setMask[61].or(this.setMask[58]).toUnsigned(),
             },
 
             queen: {
-                white: this.setMask[4],
-                black: this.setMask[60],
+                white: this.setMask[4].toUnsigned(),
+                black: this.setMask[60].toUnsigned(),
             },
 
             king: {
-                white: this.setMask[3],
-                black: this.setMask[59],
+                white: this.setMask[3].toUnsigned(),
+                black: this.setMask[59].toUnsigned(),
+            },
+        };
+
+        this.node = {
+            position: {
+                origin: this.position,
+                rotatedLeft45: long.UZERO,
+                rotatedRight45: long.UZERO,
+                rotatedLeft90: long.UZERO,
+            },
+            score: 0,
+            takingOnAisle: undefined,
+            shah: long.UZERO,
+            attacksTo: [],
+            isCastlingPossible: {
+                white: true,
+                black: true,
             },
         };
 
         for (let i = 0; i < sideSize * 2; i++) {
-            this.positionRotatedLeft90 = this.positionRotatedLeft90
+            this.node.position.rotatedLeft90 = this.node.position.rotatedLeft90
                 .or(this.setMaskRotatedLeft90[i])
                 .or(
                     this.setMaskRotatedLeft90[
@@ -213,7 +251,7 @@ class ChessEngine implements IChessEngine {
                     ]
                 );
 
-            this.positionRotatedLeft45 = this.positionRotatedLeft45
+            this.node.position.rotatedLeft45 = this.node.position.rotatedLeft45
                 .or(this.setMaskRotatedLeft45[i])
                 .or(
                     this.setMaskRotatedLeft45[
@@ -221,7 +259,7 @@ class ChessEngine implements IChessEngine {
                     ]
                 );
 
-            this.positionRotatedRight45 = this.positionRotatedRight45
+            this.node.position.rotatedRight45 = this.node.position.rotatedRight45
                 .or(this.setMaskRotatedRight45[i])
                 .or(
                     this.setMaskRotatedRight45[
@@ -261,6 +299,7 @@ class ChessEngine implements IChessEngine {
                                 .or(piecePosition.shiftRight(6))
                         )
                     )
+                    .toUnsigned()
             );
 
             this.kingAttacks.push(
@@ -283,13 +322,9 @@ class ChessEngine implements IChessEngine {
                                 .or(piecePosition.shiftRightUnsigned(7))
                         )
                     )
+                    .toUnsigned()
             );
         }
-
-        this.isCastlingPossible = {
-            white: true,
-            black: true,
-        };
 
         this.isCastlingPossibleNow = {
             white: this.setMask[2].or(this.setMask[1]),
@@ -302,27 +337,27 @@ class ChessEngine implements IChessEngine {
         };
 
         for (let i = 0; i < sideSize; i++) {
-            this.pawnsMoves.black.moves[i] = long.ZERO;
-            this.pawnsMoves.white.moves[i] = long.ZERO;
+            this.pawnsMoves.black.moves[i] = long.UZERO;
+            this.pawnsMoves.white.moves[i] = long.UZERO;
 
-            this.pawnsMoves.black.attacks[i] = long.ZERO;
-            this.pawnsMoves.white.attacks[i] = long.ZERO;
+            this.pawnsMoves.black.attacks[i] = long.UZERO;
+            this.pawnsMoves.white.attacks[i] = long.UZERO;
 
-            this.pawnsMoves.black.aisles[i] = long.ZERO;
-            this.pawnsMoves.white.aisles[i] = long.ZERO;
+            this.pawnsMoves.black.aisles[i] = long.UZERO;
+            this.pawnsMoves.white.aisles[i] = long.UZERO;
 
-            this.pawnsMoves.black.moves[numberOfCells - 1 - i] = long.ZERO;
-            this.pawnsMoves.white.moves[numberOfCells - 1 - i] = long.ZERO;
+            this.pawnsMoves.black.moves[numberOfCells - 1 - i] = long.UZERO;
+            this.pawnsMoves.white.moves[numberOfCells - 1 - i] = long.UZERO;
 
-            this.pawnsMoves.black.attacks[numberOfCells - 1 - i] = long.ZERO;
-            this.pawnsMoves.white.attacks[numberOfCells - 1 - i] = long.ZERO;
+            this.pawnsMoves.black.attacks[numberOfCells - 1 - i] = long.UZERO;
+            this.pawnsMoves.white.attacks[numberOfCells - 1 - i] = long.UZERO;
 
-            this.pawnsMoves.black.aisles[numberOfCells - 1 - i] = long.ZERO;
-            this.pawnsMoves.white.aisles[numberOfCells - 1 - i] = long.ZERO;
+            this.pawnsMoves.black.aisles[numberOfCells - 1 - i] = long.UZERO;
+            this.pawnsMoves.white.aisles[numberOfCells - 1 - i] = long.UZERO;
         }
 
         for (let i = sideSize; i < numberOfCells - sideSize; i++) {
-            const piecePosition = long.ONE.shiftLeft(numberOfCells - 1 - i);
+            const piecePosition = long.UONE.shiftLeft(numberOfCells - 1 - i);
 
             this.pawnsMoves.black.moves[i] = piecePosition.shiftLeft(sideSize);
             this.pawnsMoves.white.moves[i] = piecePosition.shiftRightUnsigned(
@@ -341,14 +376,14 @@ class ChessEngine implements IChessEngine {
 
             this.pawnsMoves.black.aisles[i] =
                 i < numberOfCells - 2 * sideSize
-                    ? long.ZERO
+                    ? long.UZERO
                     : piecePosition
                           .shiftLeft(sideSize)
                           .or(piecePosition.shiftLeft(2 * sideSize));
 
             this.pawnsMoves.white.aisles[i] =
                 i > 2 * sideSize - 1
-                    ? long.ZERO
+                    ? long.UZERO
                     : piecePosition
                           .shiftRightUnsigned(sideSize)
                           .or(piecePosition.shiftRightUnsigned(2 * sideSize));
@@ -413,7 +448,7 @@ class ChessEngine implements IChessEngine {
                     lineOfAttaсk &= resetBitsBefore[pieceBeforePosition - 1];
                 }
 
-                let attack: long = long.ZERO;
+                let attack: long = long.UZERO;
 
                 for (let k = 0; k < sideSize; k++) {
                     if (lineOfAttaсk % 2) {
@@ -468,7 +503,7 @@ class ChessEngine implements IChessEngine {
                 if (pieceBeforePosition) {
                     lineOfAttaсk &= resetBitsBefore[pieceBeforePosition - 1];
                 }
-                let attack: long = long.ZERO;
+                let attack: long = long.UZERO;
 
                 for (let k = 0; k < sideSize; k++) {
                     if (lineOfAttaсk % 2) {
@@ -531,7 +566,7 @@ class ChessEngine implements IChessEngine {
                             resetBitsBefore[pieceBeforePosition - 1];
                     }
 
-                    let attack = long.ZERO;
+                    let attack = long.UZERO;
 
                     for (
                         let k = 0;
@@ -607,7 +642,7 @@ class ChessEngine implements IChessEngine {
                             resetBitsBefore[pieceBeforePosition - 1];
                     }
 
-                    let attack = long.ZERO;
+                    let attack = long.UZERO;
 
                     for (let k = 0; k < sideSize - Math.abs(i - j); k++) {
                         if (lineOfAttaсk % 2) {
@@ -713,14 +748,14 @@ class ChessEngine implements IChessEngine {
             }
         }
 
-        this.сalculateAttacksTo();
+        this.сalculateAttacksTo(this.node);
     }
 
-    private getVerticalAttack(from: number): long {
+    private getVerticalAttack(from: number, positionRotatedLeft90: long): long {
         const line = maxSixBitValue;
         const column = from % sideSize;
 
-        const verticalLine: number = this.positionRotatedLeft90
+        const verticalLine: number = positionRotatedLeft90
             .shiftRightUnsigned((sideSize - 1 - column) * sideSize + 1)
             .and(line)
             .getLowBitsUnsigned();
@@ -728,11 +763,11 @@ class ChessEngine implements IChessEngine {
         return this.verticalAttacks[from][verticalLine];
     }
 
-    private getHorizontalAttack(from: number): long {
+    private getHorizontalAttack(from: number, position: Position): long {
         const line = maxSixBitValue;
         const row: number = Math.floor(from / sideSize);
 
-        const horizontalLine: number = this.getPositionForAll()
+        const horizontalLine: number = this.getPositionForAll(position)
             .shiftRightUnsigned((sideSize - 1 - row) * sideSize + 1)
             .and(line)
             .getLowBitsUnsigned();
@@ -740,7 +775,10 @@ class ChessEngine implements IChessEngine {
         return this.horizontalAttacks[from][horizontalLine];
     }
 
-    private getDiagonalA1H8Attack(from: number): long {
+    private getDiagonalA1H8Attack(
+        from: number,
+        positionRotatedLeft45: long
+    ): long {
         const line = maxSixBitValue;
         const column = from % sideSize;
         const row: number = Math.floor(from / sideSize);
@@ -754,7 +792,7 @@ class ChessEngine implements IChessEngine {
             shift = 29 + ((16 - number + 1) / 2) * number;
         }
 
-        const diagonalA1H8Line: number = this.positionRotatedLeft45
+        const diagonalA1H8Line: number = positionRotatedLeft45
             .shiftRightUnsigned(shift)
             .and(line)
             .getLowBitsUnsigned();
@@ -762,7 +800,10 @@ class ChessEngine implements IChessEngine {
         return this.diagonalA1H8Attacks[from][diagonalA1H8Line];
     }
 
-    private getDiagonalH1A8Attacks(from: number): long {
+    private getDiagonalH1A8Attacks(
+        from: number,
+        positionRotatedRight45: long
+    ): long {
         const line = maxSixBitValue;
         const column = from % sideSize;
         const row: number = Math.floor(from / sideSize);
@@ -776,7 +817,7 @@ class ChessEngine implements IChessEngine {
             shift = 29 + ((16 - number + 1) / 2) * number;
         }
 
-        const diagonalH1A8Line: number = this.positionRotatedRight45
+        const diagonalH1A8Line: number = positionRotatedRight45
             .shiftRightUnsigned(shift)
             .and(line)
             .getLowBitsUnsigned();
@@ -784,26 +825,35 @@ class ChessEngine implements IChessEngine {
         return this.diagonalH1A8Attacks[from][diagonalH1A8Line];
     }
 
-    public getPossibleMoves(cell: number, piece: Piece): long {
+    public getPossibleMoves(cell: number, piece: Piece, node?: Node): long {
+        node = node ?? this.node;
+
         switch (piece.type) {
             case PieceType.bishop:
-                return this.getBishopAttacks(cell, piece.color);
+                return this.getBishopAttacks(cell, piece.color, node);
             case PieceType.rook:
-                return this.getRookAttacks(cell, piece.color);
+                return this.getRookAttacks(cell, piece.color, node);
             case PieceType.queen:
-                return this.getQueenAttacks(cell, piece.color);
+                return this.getQueenAttacks(cell, piece.color, node);
             case PieceType.king:
-                return this.getKingAttacks(cell, piece.color);
+                return this.getKingAttacks(cell, piece.color, node);
             case PieceType.pawn:
-                return this.getPawnAttacks(cell, piece.color);
+                return this.getPawnAttacks(cell, piece.color, node);
             case PieceType.knight:
-                return this.getKnightAttacks(cell, piece.color);
+                return this.getKnightAttacks(cell, piece.color, node);
         }
     }
 
-    private getPawnAttacks(from: number, color: 'white' | 'black'): long {
-        const myPosition = this.getPosition(color);
-        let enemyPosition = this.getPosition(enemy[color]);
+    private getPawnAttacks(
+        from: number,
+        color: 'white' | 'black',
+        node: Node
+    ): long {
+        const myPosition = this.getPosition(node.position.origin, color);
+        let enemyPosition = this.getPosition(
+            node.position.origin,
+            enemy[color]
+        );
         const allPostion = myPosition.or(enemyPosition);
 
         const notSelfPieces: long = myPosition.not();
@@ -820,15 +870,20 @@ class ChessEngine implements IChessEngine {
             }
         }
 
-        if (this.takingOnAisle) {
-            enemyPosition = enemyPosition.or(this.setMask[this.takingOnAisle]);
+        if (node.takingOnAisle) {
+            enemyPosition = enemyPosition.or(this.setMask[node.takingOnAisle]);
         }
 
         const pawnAttack = (this.pawnsMoves[color] as PawnsMoves).attacks[
             from
         ].and(enemyPosition);
 
-        const directionOfAttack = this.isLocked(from, color, notSelfPieces);
+        const directionOfAttack = this.isLocked(
+            from,
+            color,
+            notSelfPieces,
+            node
+        );
 
         switch (directionOfAttack) {
             case DirectionOfAttack.horizontal:
@@ -847,35 +902,58 @@ class ChessEngine implements IChessEngine {
                 );
         }
 
-        if (!this.shah.isZero()) {
-            return pawnMove.or(pawnAttack).and(this.shah);
+        if (!node.shah.isZero()) {
+            return pawnMove.or(pawnAttack).and(node.shah);
         }
 
         return pawnMove.or(pawnAttack);
     }
-    private getKnightAttacks(from: number, color: 'white' | 'black'): long {
-        const notSelfPieces: long = this.getPosition(color).not();
 
-        if (this.isLocked(from, color, notSelfPieces)) {
+    private getKnightAttacks(
+        from: number,
+        color: 'white' | 'black',
+        node: Node
+    ): long {
+        const notSelfPieces: long = this.getPosition(
+            node.position.origin,
+            color
+        ).not();
+
+        if (this.isLocked(from, color, notSelfPieces, node)) {
             return long.ZERO;
         }
 
-        if (!this.shah.isZero()) {
-            return this.knightsAttacks[from].and(this.shah);
+        if (!node.shah.isZero()) {
+            return this.knightsAttacks[from].and(node.shah);
         }
 
         return this.knightsAttacks[from].and(notSelfPieces);
     }
-    private getRookAttacks(from: number, color: 'white' | 'black'): long {
-        const notSelfPieces: long = this.getPosition(color).not();
 
-        const horizontalAttack = this.getHorizontalAttack(from);
-        const verticalAttack = this.getVerticalAttack(from);
+    private getRookAttacks(
+        from: number,
+        color: 'white' | 'black',
+        node: Node
+    ): long {
+        const notSelfPieces: long = this.getPosition(
+            node.position.origin,
+            color
+        ).not();
+
+        const horizontalAttack = this.getHorizontalAttack(
+            from,
+            node.position.origin
+        );
+        const verticalAttack = this.getVerticalAttack(
+            from,
+            node.position.rotatedLeft90
+        );
 
         const directionOfAttack = this.isLocked(
             from,
             color,
             notSelfPieces,
+            node,
             horizontalAttack,
             verticalAttack
         );
@@ -892,23 +970,37 @@ class ChessEngine implements IChessEngine {
 
         const rookAttack = horizontalAttack.or(verticalAttack);
 
-        if (!this.shah.isZero()) {
-            return rookAttack.and(this.shah);
+        if (!node.shah.isZero()) {
+            return rookAttack.and(node.shah);
         }
 
         return rookAttack.and(notSelfPieces);
     }
 
-    private getBishopAttacks(from: number, color: 'white' | 'black'): long {
-        const notSelfPieces: long = this.getPosition(color).not();
+    private getBishopAttacks(
+        from: number,
+        color: 'white' | 'black',
+        node: Node
+    ): long {
+        const notSelfPieces: long = this.getPosition(
+            node.position.origin,
+            color
+        ).not();
 
-        const a1H8Attacks = this.getDiagonalA1H8Attack(from);
-        const h1A8Attack = this.getDiagonalH1A8Attacks(from);
+        const a1H8Attacks = this.getDiagonalA1H8Attack(
+            from,
+            node.position.rotatedLeft45
+        );
+        const h1A8Attack = this.getDiagonalH1A8Attacks(
+            from,
+            node.position.rotatedRight45
+        );
 
         const directionOfAttack = this.isLocked(
             from,
             color,
             notSelfPieces,
+            node,
             undefined,
             undefined,
             a1H8Attacks,
@@ -927,25 +1019,45 @@ class ChessEngine implements IChessEngine {
 
         const bishopAttack = a1H8Attacks.or(h1A8Attack);
 
-        if (!this.shah.isZero()) {
-            return bishopAttack.and(this.shah);
+        if (!node.shah.isZero()) {
+            return bishopAttack.and(node.shah);
         }
 
         return bishopAttack.and(notSelfPieces);
     }
 
-    private getQueenAttacks(from: number, color: 'white' | 'black'): long {
-        const notSelfPieces: long = this.getPosition(color).not();
+    private getQueenAttacks(
+        from: number,
+        color: 'white' | 'black',
+        node: Node
+    ): long {
+        const notSelfPieces: long = this.getPosition(
+            node.position.origin,
+            color
+        ).not();
 
-        const horizontalAttack = this.getHorizontalAttack(from);
-        const verticalAttack = this.getVerticalAttack(from);
-        const a1H8Attack = this.getDiagonalA1H8Attack(from);
-        const h1A8Attack = this.getDiagonalH1A8Attacks(from);
+        const horizontalAttack = this.getHorizontalAttack(
+            from,
+            node.position.origin
+        );
+        const verticalAttack = this.getVerticalAttack(
+            from,
+            node.position.rotatedLeft90
+        );
+        const a1H8Attack = this.getDiagonalA1H8Attack(
+            from,
+            node.position.rotatedLeft45
+        );
+        const h1A8Attack = this.getDiagonalH1A8Attacks(
+            from,
+            node.position.rotatedRight45
+        );
 
         const directionOfAttack = this.isLocked(
             from,
             color,
             notSelfPieces,
+            node,
             horizontalAttack,
             verticalAttack,
             a1H8Attack,
@@ -968,14 +1080,23 @@ class ChessEngine implements IChessEngine {
             .or(a1H8Attack)
             .or(h1A8Attack);
 
-        if (!this.shah.isZero()) {
-            return queenAttack.and(this.shah);
+        if (!node.shah.isZero()) {
+            return queenAttack.and(node.shah);
         }
 
         return queenAttack.and(notSelfPieces);
     }
-    private getKingAttacks(from: number, color: 'white' | 'black'): long {
-        const notSelfPieces: long = this.getPosition(color).not();
+
+    private getKingAttacks(
+        from: number,
+        color: 'white' | 'black',
+        node: Node
+    ): long {
+        const notSelfPieces: long = this.getPosition(
+            node.position.origin,
+            color
+        ).not();
+
         let kingAttacks = this.kingAttacks[from];
 
         const row = Math.floor(from / sideSize);
@@ -991,7 +1112,7 @@ class ChessEngine implements IChessEngine {
                 if (i === row && j === column) continue;
 
                 const index = i * sideSize + j;
-                const attackingEnemies = this.attacksTo[index].and(
+                const attackingEnemies = node.attacksTo[index].and(
                     notSelfPieces
                 );
 
@@ -1001,9 +1122,9 @@ class ChessEngine implements IChessEngine {
             }
         }
 
-        if (this.isCastlingPossible[color]) {
+        if (node.isCastlingPossible[color]) {
             if (
-                this.getPositionForAll()
+                this.getPositionForAll(node.position.origin)
                     .and(this.isCastlingPossibleNow[color])
                     .isZero()
             ) {
@@ -1011,7 +1132,7 @@ class ChessEngine implements IChessEngine {
                 let isNowhereAttacks = true;
 
                 for (let i = from; i > from - 3; i--) {
-                    if (!this.attacksTo[i].and(notSelfPieces).isZero()) {
+                    if (!node.attacksTo[i].and(notSelfPieces).isZero()) {
                         isNowhereAttacks = false;
                         break;
                     }
@@ -1030,48 +1151,61 @@ class ChessEngine implements IChessEngine {
         from: number,
         color: 'white' | 'black',
         notSelfPieces: long,
+        node: Node,
         horizontalAttack?: long,
         verticalAttack?: long,
         a1H8Attacks?: long,
         h1A8Attack?: long
     ): DirectionOfAttack | null {
-        const enemiesAttacking = this.attacksTo[from].and(notSelfPieces);
+        const enemiesAttacking = node.attacksTo[from].and(notSelfPieces);
 
-        if (!enemiesAttacking.isZero) {
+        if (!enemiesAttacking.isZero()) {
             const bishopsAttackingPiece = enemiesAttacking.and(
-                this.position.queen[enemy[color] as 'white' | 'black'].or(
-                    this.position.bishop[enemy[color] as 'white' | 'black']
+                node.position.origin.queen[
+                    enemy[color] as 'white' | 'black'
+                ].or(
+                    node.position.origin.bishop[
+                        enemy[color] as 'white' | 'black'
+                    ]
                 )
             );
 
             if (!bishopsAttackingPiece.isZero()) {
                 let bishopAttackFromCurrent =
-                    a1H8Attacks ?? this.getDiagonalA1H8Attack(from);
+                    a1H8Attacks ??
+                    this.getDiagonalA1H8Attack(
+                        from,
+                        node.position.rotatedLeft45
+                    );
 
                 if (
-                    bishopAttackFromCurrent
-                        .and(bishopsAttackingPiece)
-                        .getNumBitsAbs() === 1
+                    this.getOneCount(
+                        bishopAttackFromCurrent.and(bishopsAttackingPiece)
+                    ) === 1
                 ) {
                     if (
                         !bishopAttackFromCurrent
-                            .and(this.position.king[color])
+                            .and(node.position.origin.king[color])
                             .isZero()
                     )
                         return DirectionOfAttack.diagonalA1H8;
                 }
 
                 bishopAttackFromCurrent =
-                    h1A8Attack ?? this.getDiagonalH1A8Attacks(from);
+                    h1A8Attack ??
+                    this.getDiagonalH1A8Attacks(
+                        from,
+                        node.position.rotatedRight45
+                    );
 
                 if (
-                    bishopAttackFromCurrent
-                        .and(bishopsAttackingPiece)
-                        .getNumBitsAbs() === 1
+                    this.getOneCount(
+                        bishopAttackFromCurrent.and(bishopsAttackingPiece)
+                    ) === 1
                 ) {
                     if (
                         !bishopAttackFromCurrent
-                            .and(this.position.king[color])
+                            .and(node.position.origin.king[color])
                             .isZero()
                     )
                         return DirectionOfAttack.diagonalH1A8;
@@ -1079,39 +1213,43 @@ class ChessEngine implements IChessEngine {
             }
 
             const rooksAttackingPiece = enemiesAttacking.and(
-                this.position.queen[enemy[color] as 'white' | 'black'].or(
-                    this.position.rook[enemy[color] as 'white' | 'black']
+                node.position.origin.queen[
+                    enemy[color] as 'white' | 'black'
+                ].or(
+                    node.position.origin.rook[enemy[color] as 'white' | 'black']
                 )
             );
 
             if (!rooksAttackingPiece.isZero()) {
                 let rookAttackFromCurrent =
-                    horizontalAttack ?? this.getHorizontalAttack(from);
+                    horizontalAttack ??
+                    this.getHorizontalAttack(from, node.position.origin);
 
                 if (
-                    rookAttackFromCurrent
-                        .and(rooksAttackingPiece)
-                        .getNumBitsAbs() === 1
+                    this.getOneCount(
+                        rookAttackFromCurrent.and(rooksAttackingPiece)
+                    ) === 1
                 ) {
                     if (
                         !rookAttackFromCurrent
-                            .and(this.position.king[color])
+                            .and(node.position.origin.king[color])
                             .isZero()
                     )
                         return DirectionOfAttack.horizontal;
                 }
 
                 rookAttackFromCurrent =
-                    verticalAttack ?? this.getVerticalAttack(from);
+                    verticalAttack ??
+                    this.getVerticalAttack(from, node.position.rotatedLeft90);
 
                 if (
-                    rookAttackFromCurrent
-                        .and(rooksAttackingPiece)
-                        .getNumBitsAbs() === 1
+                    this.getOneCount(
+                        rookAttackFromCurrent.and(rooksAttackingPiece)
+                    ) === 1
                 ) {
                     if (
                         !rookAttackFromCurrent
-                            .and(this.position.king[color])
+                            .and(node.position.origin.king[color])
                             .isZero()
                     )
                         return DirectionOfAttack.vertical;
@@ -1122,36 +1260,66 @@ class ChessEngine implements IChessEngine {
         return null;
     }
 
-    public makeMove(move: Move): Position {
+    public makeMove(move: Move, node?: Node): Position {
+        node = node ?? this.node;
         const sign = move.piece.color === 'white' ? 1 : -1;
+
+        node.score *= -1;
+
+        if (move.takenPiece) {
+            node.score +=
+                PieceValue[
+                    PieceType[move.takenPiece.type] as keyof typeof PieceValue
+                ];
+        }
+
+        if (move.replacePiece) {
+            node.score -=
+                PieceValue[
+                    PieceType[move.piece.type] as keyof typeof PieceValue
+                ];
+
+            node.score +=
+                PieceValue[
+                    PieceType[move.replacePiece.type] as keyof typeof PieceValue
+                ];
+        }
 
         //taking on aisle move
         if (
-            move.to === this.takingOnAisle &&
+            move.to === node.takingOnAisle &&
             move.piece.type === PieceType.pawn
         ) {
-            this.unsetPiece(move.piece, move.from);
-            this.setPiece(move.piece, move.to);
+            this.unsetPiece(move.piece, move.from, node.position);
+            this.setPiece(move.piece, move.to, node.position);
 
             this.unsetPiece(
                 { type: PieceType.pawn, color: enemy[move.piece.color] },
-                move.to + sign * sideSize
+                move.to + sign * sideSize,
+                node.position
             );
         } else {
             //taking move
             if (move.takenPiece) {
-                this.unsetPiece(move.takenPiece, move.to);
+                this.unsetPiece(move.takenPiece, move.to, node.position);
             }
-            //normal move
-            this.unsetPiece(move.piece, move.from);
-            this.setPiece(move.piece, move.to);
+
+            this.unsetPiece(move.piece, move.from, node.position);
+
+            if (move.replacePiece) {
+                //replace of a pawn, for a queen, rook, bishop or knight
+                this.setPiece(move.replacePiece, move.to, node.position);
+            } else {
+                //normal move;
+                this.setPiece(move.piece, move.to, node.position);
+            }
         }
 
         if (
             move.piece.type === PieceType.king ||
             move.from === this.castlingRooksPosition[move.piece.color]
         ) {
-            this.isCastlingPossible[move.piece.color] = false;
+            node.isCastlingPossible[move.piece.color] = false;
         }
 
         //castling move for rook
@@ -1163,124 +1331,313 @@ class ChessEngine implements IChessEngine {
 
             this.unsetPiece(
                 castlingRook,
-                this.castlingRooksPosition[castlingRook.color]
+                this.castlingRooksPosition[castlingRook.color],
+                node.position
             );
             this.setPiece(
                 castlingRook,
-                this.castlingRooksPosition[castlingRook.color] + 2
+                this.castlingRooksPosition[castlingRook.color] + 2,
+                node.position
             );
         }
 
-        this.takingOnAisle = undefined;
+        node.takingOnAisle = undefined;
 
         if (
             move.piece.type === PieceType.pawn &&
             Math.abs(move.from - move.to) === 2 * sideSize
         ) {
-            this.takingOnAisle = move.to - sign * sideSize;
+            node.takingOnAisle = move.to - sign * sideSize;
         }
 
-        this.сalculateAttacksTo();
+        this.сalculateAttacksTo(node);
 
-        return this.position;
+        return node.position.origin;
     }
 
-    private setPiece(piece: Piece, pieceIndex: number) {
-        this.position[PieceType[piece.type] as keyof Position][
+    private setPiece(piece: Piece, pieceIndex: number, position: AllPosition) {
+        position.origin[PieceType[piece.type] as keyof Position][
             piece.color
-        ] = this.position[PieceType[piece.type] as keyof Position][
+        ] = position.origin[PieceType[piece.type] as keyof Position][
             piece.color
         ].or(this.setMask[pieceIndex]);
 
-        this.positionRotatedLeft45 = this.positionRotatedLeft45.or(
+        position.rotatedLeft45 = position.rotatedLeft45.or(
             this.setMaskRotatedLeft45[pieceIndex]
         );
-        this.positionRotatedLeft90 = this.positionRotatedLeft90.or(
+        position.rotatedLeft90 = position.rotatedLeft90.or(
             this.setMaskRotatedLeft90[pieceIndex]
         );
-        this.positionRotatedRight45 = this.positionRotatedRight45.or(
+        position.rotatedRight45 = position.rotatedRight45.or(
             this.setMaskRotatedRight45[pieceIndex]
         );
     }
 
-    private unsetPiece(piece: Piece, pieceIndex: number) {
-        this.position[PieceType[piece.type] as keyof Position][
+    private unsetPiece(
+        piece: Piece,
+        pieceIndex: number,
+        position: AllPosition
+    ) {
+        position.origin[PieceType[piece.type] as keyof Position][
             piece.color
-        ] = this.position[PieceType[piece.type] as keyof Position][
+        ] = position.origin[PieceType[piece.type] as keyof Position][
             piece.color
         ].and(this.setMask[pieceIndex].not());
 
-        this.positionRotatedLeft45 = this.positionRotatedLeft45.and(
+        position.rotatedLeft45 = position.rotatedLeft45.and(
             this.setMaskRotatedLeft45[pieceIndex].not()
         );
-        this.positionRotatedLeft90 = this.positionRotatedLeft90.and(
+        position.rotatedLeft90 = position.rotatedLeft90.and(
             this.setMaskRotatedLeft90[pieceIndex].not()
         );
-        this.positionRotatedRight45 = this.positionRotatedRight45.and(
+        position.rotatedRight45 = position.rotatedRight45.and(
             this.setMaskRotatedRight45[pieceIndex].not()
         );
     }
 
-    public async getComputerMove(position: Position): Promise<number> {
-        await wait(1000);
-        return 0;
+    public async getComputerMove(color: 'white' | 'black'): Promise<Move> {
+        const move: Move = this.makeAlphaBetaPruning(this.node, color, 1).move!;
+
+        return move;
     }
 
-    private сalculateAttacksTo(): void {
+    private makeAlphaBetaPruning(
+        node: Node,
+        color: 'white' | 'black',
+        depth: number,
+        beta?: number
+    ): PruningResult {
+        let result: PruningResult | undefined;
+        const moves = this.getAllMoves(node, color);
+
+        for (let i = 0; i < moves.length; i++) {
+            const move = convertToMove(moves[i], color);
+            let currentResult: PruningResult = {
+                move: move,
+                alpha: 0,
+            };
+
+            const nextNode = cloneObject(node) as Node;
+            this.makeMove(move, nextNode);
+
+            if (depth) {
+                currentResult = this.makeAlphaBetaPruning(
+                    nextNode,
+                    enemy[color],
+                    depth - 1,
+                    result !== undefined ? -result.alpha : undefined
+                );
+            } else {
+                currentResult.alpha =
+                    nextNode.score +
+                    this.getMovesCount(nextNode, color) -
+                    this.getMovesCount(nextNode, enemy[color]);
+            }
+
+            //the move of this level, not the next level(after calling this.makeAlphaBetaPruning)
+            currentResult.move = move;
+
+            if (beta && currentResult.alpha > beta) {
+                currentResult.alpha = -currentResult.alpha;
+                return currentResult;
+            }
+
+            if (result === undefined || currentResult.alpha > result.alpha) {
+                result = currentResult;
+            }
+        }
+
+        if (result) {
+            result.alpha = -result.alpha;
+            return result;
+        } else {
+            //todo
+            //if move undefined pat or mat
+            return { alpha: 0 };
+        }
+    }
+
+    private getMovesCount(node: Node, color: 'white' | 'black'): number {
+        let movesCount = 0;
+
+        for (let key in PieceType) {
+            const pieceType: PieceType = Number(key);
+            if (isNaN(pieceType)) continue;
+
+            let picesOfSomeType: long = node.position.origin[
+                PieceType[pieceType] as keyof Position
+            ][color] as long;
+
+            while (!picesOfSomeType.isZero()) {
+                const from = numberOfCells - picesOfSomeType.getNumBitsAbs();
+
+                let moves: long = this.getPossibleMoves(
+                    from,
+                    {
+                        type: pieceType,
+                        color: color,
+                    },
+                    node
+                );
+
+                movesCount += this.getOneCount(moves);
+
+                picesOfSomeType = picesOfSomeType.and(this.setMask[from].not());
+            }
+        }
+
+        return movesCount;
+    }
+
+    private getOneCount(bitboard: long) {
+        let count: number = 0;
+
+        while (!bitboard.isZero()) {
+            const bit: number = numberOfCells - bitboard.getNumBitsAbs();
+            bitboard = bitboard.and(this.setMask[bit].not());
+
+            count++;
+        }
+
+        return count;
+    }
+
+    private getAllMoves(node: Node, color: 'white' | 'black'): number[] {
+        const allMoves: number[] = [];
+
+        for (let key in PieceType) {
+            const pieceType: PieceType = Number(key);
+            if (isNaN(pieceType)) continue;
+
+            let picesOfSomeType: long = node.position.origin[
+                PieceType[pieceType] as keyof Position
+            ][color] as long;
+
+            while (!picesOfSomeType.isZero()) {
+                const from = numberOfCells - picesOfSomeType.getNumBitsAbs();
+
+                let moves: long = this.getPossibleMoves(
+                    from,
+                    {
+                        type: pieceType,
+                        color: color,
+                    },
+                    node
+                );
+
+                while (!moves.isZero()) {
+                    const to = numberOfCells - moves.getNumBitsAbs();
+                    let move = from + (to << 6) + (pieceType << 12);
+
+                    for (let key in PieceType) {
+                        const pieceType: PieceType = Number(key);
+                        if (isNaN(pieceType)) continue;
+
+                        let enemyPicesOfSomeType: long = node.position.origin[
+                            PieceType[pieceType] as keyof Position
+                        ][enemy[color] as 'white' | 'black'] as long;
+
+                        if (
+                            !enemyPicesOfSomeType.and(this.setMask[to]).isZero()
+                        ) {
+                            move += pieceType << 15;
+                        }
+                    }
+
+                    if (
+                        pieceType === PieceType.pawn &&
+                        ((color === 'white' && to > 55) ||
+                            (color === 'black' && to < 8))
+                    ) {
+                        allMoves.push(move + (PieceType.bishop << 18));
+                        allMoves.push(move + (PieceType.queen << 18));
+                        allMoves.push(move + (PieceType.knight << 18));
+                        allMoves.push(move + (PieceType.rook << 18));
+                    } else {
+                        allMoves.push(move);
+                    }
+
+                    moves = moves.and(this.setMask[to].not());
+                }
+
+                picesOfSomeType = picesOfSomeType.and(this.setMask[from].not());
+            }
+        }
+
+        return allMoves;
+    }
+
+    private сalculateAttacksTo(node: Node): void {
         for (let i = 0; i < numberOfCells; i++) {
-            this.attacksTo[i] = this.kingAttacks[i]
-                .and(this.position.king.black.or(this.position.king.white))
+            node.attacksTo[i] = this.kingAttacks[i]
+                .and(
+                    node.position.origin.king.black.or(
+                        node.position.origin.king.white
+                    )
+                )
                 .or(
                     this.knightsAttacks[i].and(
-                        this.position.knight.black.or(
-                            this.position.knight.white
+                        node.position.origin.knight.black.or(
+                            node.position.origin.knight.white
                         )
                     )
                 )
                 .or(
                     this.pawnsMoves.white.attacks[i].and(
-                        this.position.pawn.black
+                        node.position.origin.pawn.black
                     )
                 )
                 .or(
                     this.pawnsMoves.black.attacks[i].and(
-                        this.position.pawn.white
+                        node.position.origin.pawn.white
                     )
                 )
                 .or(
-                    this.getHorizontalAttack(i)
-                        .or(this.getVerticalAttack(i))
+                    this.getHorizontalAttack(i, node.position.origin)
+                        .or(
+                            this.getVerticalAttack(
+                                i,
+                                node.position.rotatedLeft90
+                            )
+                        )
                         .and(
-                            this.position.queen.black
-                                .or(this.position.queen.white)
-                                .or(this.position.rook.black)
-                                .or(this.position.rook.white)
+                            node.position.origin.queen.black
+                                .or(node.position.origin.queen.white)
+                                .or(node.position.origin.rook.black)
+                                .or(node.position.origin.rook.white)
                         )
                 )
                 .or(
-                    this.getDiagonalA1H8Attack(i)
-                        .or(this.getDiagonalH1A8Attacks(i))
+                    this.getDiagonalA1H8Attack(i, node.position.rotatedLeft45)
+                        .or(
+                            this.getDiagonalH1A8Attacks(
+                                i,
+                                node.position.rotatedRight45
+                            )
+                        )
                         .and(
-                            this.position.queen.black
-                                .or(this.position.queen.white)
-                                .or(this.position.bishop.black)
-                                .or(this.position.bishop.white)
+                            node.position.origin.queen.black
+                                .or(node.position.origin.queen.white)
+                                .or(node.position.origin.bishop.black)
+                                .or(node.position.origin.bishop.white)
                         )
                 );
         }
     }
 
-    private getPosition(color: 'white' | 'black'): long {
-        return this.position.bishop[color]
-            .or(this.position.king[color])
-            .or(this.position.knight[color])
-            .or(this.position.pawn[color])
-            .or(this.position.queen[color])
-            .or(this.position.rook[color]);
+    private getPosition(position: Position, color: 'white' | 'black'): long {
+        return position.bishop[color]
+            .or(position.king[color])
+            .or(position.knight[color])
+            .or(position.pawn[color])
+            .or(position.queen[color])
+            .or(position.rook[color]);
     }
 
-    private getPositionForAll(): long {
-        return this.getPosition('black').or(this.getPosition('white'));
+    private getPositionForAll(position: Position): long {
+        return this.getPosition(position, 'black').or(
+            this.getPosition(position, 'white')
+        );
     }
 }
 

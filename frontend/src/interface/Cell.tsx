@@ -7,7 +7,7 @@ import { getPieceImage } from '../functions/getPieceImage';
 import { CellStatus } from '../types/CellStatus';
 import { useMoveContext } from './MoveContext';
 import { useInfoContext } from './InfoContext';
-import { sideSize } from '../constants/constants';
+import { animationTime, sideSize } from '../constants/constants';
 import { Players } from '../types/Players';
 import { PieceType } from '../types/PieceType';
 
@@ -42,6 +42,7 @@ export const Cell: FC<Props> = ({
         onMove,
         setLastMove,
         whoseMove,
+        enemyMove: computerMove,
     } = useInfoContext();
 
     const {
@@ -249,6 +250,35 @@ export const Cell: FC<Props> = ({
         }
     }, [status, boardSide]);
 
+    useEffect(() => {
+        if (pieceImage.current && computerMove.from === cellNumber) {
+            const x = computerMove.to % sideSize;
+            const y = Math.floor(computerMove.to / sideSize);
+
+            //for castling animate
+            if (
+                piece?.type === PieceType.king &&
+                computerMove.from - computerMove.to === 2
+            ) {
+                castlingRooks[piece.color].current.style.left =
+                    x === 6 ? '62.5%' : '25%';
+            }
+
+            const top = boardSide
+                ? boardOneEighth * y + '%'
+                : boardOneEighth * (sideSize - 1 - y) + '%';
+            const left = boardSide
+                ? boardOneEighth * x + '%'
+                : boardOneEighth * (sideSize - 1 - x) + '%';
+
+            //for move animate
+            pieceImage.current!.style.top = top;
+            pieceImage.current!.style.left = left;
+
+            setLastMove(computerMove.from, computerMove.to);
+        }
+    }, [computerMove, setLastMove]);
+
     let onClickByCell;
 
     if (status & CellStatus.tracking) {
@@ -256,7 +286,7 @@ export const Cell: FC<Props> = ({
             resetBoard();
             setLastMoveFromCell();
             onPieceMove(top, left);
-            setTimeout(onClick!, 300);
+            setTimeout(onClick!, animationTime);
         };
     } else {
         onClickByCell = onClick;
@@ -296,7 +326,8 @@ export const Cell: FC<Props> = ({
                         top: ${top};
                         left: ${left};
                         width: ${boardOneEighth}%;
-                        transition: top 0.3s linear, left 0.3s linear;
+                        transition: top ${animationTime}ms linear,
+                            left ${animationTime}ms linear;
 
                         ${status & CellStatus.shah
                             ? `background: radial-gradient(

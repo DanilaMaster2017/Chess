@@ -10,7 +10,7 @@ import { useInfoContext } from './InfoContext';
 import { useGameSettingsContext } from './GameSettingsContext';
 import { Position } from '../types/Position';
 import { Move } from '../types/Move';
-import { convertToMove } from '../functions/convertToMove';
+import { animationTime } from '../constants/constants';
 
 export const ComputerGamePage: FC = () => {
     const [position, setPosition] = useState<Position>(chessEngine.position);
@@ -24,6 +24,8 @@ export const ComputerGamePage: FC = () => {
         setWhoseMove,
         whoseMove,
         setOnMove,
+        enemyInfo,
+        setEnemyMove: setComputerMove,
     } = useInfoContext();
 
     useEffect(() => {
@@ -75,12 +77,17 @@ export const ComputerGamePage: FC = () => {
     useEffect(() => {
         if (whoseMove === 'enemy') {
             const doGetComputerMove = async () => {
-                const codeOfMove = await chessEngine.getComputerMove(position);
-                const move: Move = convertToMove(codeOfMove);
-                //const newPosition = chessEngine.makeMove(move);
+                const move: Move = await chessEngine.getComputerMove(
+                    enemyInfo.color
+                );
+                setComputerMove(move);
 
-                //setPosition(newPosition);
-                setWhoseMove('player');
+                setTimeout(() => {
+                    const newPosition = chessEngine.makeMove(move);
+
+                    setPosition(newPosition);
+                    setWhoseMove('player');
+                }, animationTime);
             };
             doGetComputerMove();
         }

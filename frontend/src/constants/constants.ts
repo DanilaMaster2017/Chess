@@ -1,3 +1,4 @@
+export const animationTime = 300;
 export const sideSize = 8;
 export const numberOfCells = sideSize * sideSize;
 export const playMan = 'Создать игру';

@@ -5,4 +5,5 @@ export interface Move {
     to: number;
     piece: Piece;
     takenPiece?: Piece;
+    replacePiece?: Piece;
 }
