@@ -7,7 +7,11 @@ import { getPieceImage } from '../functions/getPieceImage';
 import { CellStatus } from '../types/CellStatus';
 import { useMoveContext } from './MoveContext';
 import { useInfoContext } from './InfoContext';
-import { animationTime, sideSize } from '../constants/constants';
+import {
+    afterAnimationTime,
+    animationTime,
+    sideSize,
+} from '../constants/constants';
 import { Players } from '../types/Players';
 import { PieceType } from '../types/PieceType';
 
@@ -42,7 +46,7 @@ export const Cell: FC<Props> = ({
         onMove,
         setLastMove,
         whoseMove,
-        enemyMove: computerMove,
+        enemyMove,
     } = useInfoContext();
 
     const {
@@ -242,6 +246,8 @@ export const Cell: FC<Props> = ({
                         }
                     }
 
+                    pieceImage.current!.style.zIndex = '2';
+
                     //for move animate
                     pieceImage.current!.style.top = top;
                     pieceImage.current!.style.left = left;
@@ -251,14 +257,23 @@ export const Cell: FC<Props> = ({
     }, [status, boardSide]);
 
     useEffect(() => {
-        if (pieceImage.current && computerMove.from === cellNumber) {
-            const x = computerMove.to % sideSize;
-            const y = Math.floor(computerMove.to / sideSize);
+        if (pieceImage.current && enemyMove.to === cellNumber) {
+            //piece taken
+            pieceImage.current.style.opacity = '0.5';
+
+            setTimeout(() => {
+                pieceImage.current!.style.opacity = '1';
+            }, animationTime + afterAnimationTime - 1); // -1 so the front piece doesn't blink
+        }
+
+        if (pieceImage.current && enemyMove.from === cellNumber) {
+            const x = enemyMove.to % sideSize;
+            const y = Math.floor(enemyMove.to / sideSize);
 
             //for castling animate
             if (
                 piece?.type === PieceType.king &&
-                computerMove.from - computerMove.to === 2
+                enemyMove.from - enemyMove.to === 2
             ) {
                 castlingRooks[piece.color].current.style.left =
                     x === 6 ? '62.5%' : '25%';
@@ -271,22 +286,34 @@ export const Cell: FC<Props> = ({
                 ? boardOneEighth * x + '%'
                 : boardOneEighth * (sideSize - 1 - x) + '%';
 
+            pieceImage.current!.style.zIndex = '2';
+
             //for move animate
             pieceImage.current!.style.top = top;
             pieceImage.current!.style.left = left;
 
-            setLastMove(computerMove.from, computerMove.to);
+            setLastMove(enemyMove.from, enemyMove.to);
         }
-    }, [computerMove, setLastMove]);
+    }, [enemyMove]);
 
     let onClickByCell;
 
     if (status & CellStatus.tracking) {
         onClickByCell = () => {
             resetBoard();
+
+            if (pieceImage.current) {
+                //piece taken
+                pieceImage.current.style.opacity = '0.5';
+
+                setTimeout(() => {
+                    pieceImage.current!.style.opacity = '1';
+                }, animationTime + afterAnimationTime - 1); // -1 so the front piece doesn't blink
+            }
+
             setLastMoveFromCell();
             onPieceMove(top, left);
-            setTimeout(onClick!, animationTime);
+            setTimeout(onClick!, animationTime + afterAnimationTime);
         };
     } else {
         onClickByCell = onClick;

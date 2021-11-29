@@ -1,3 +1,4 @@
+export const afterAnimationTime = 50; //needed to finish the animation before transferring the move
 export const animationTime = 300;
 export const sideSize = 8;
 export const numberOfCells = sideSize * sideSize;

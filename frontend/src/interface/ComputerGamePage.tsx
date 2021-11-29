@@ -10,7 +10,7 @@ import { useInfoContext } from './InfoContext';
 import { useGameSettingsContext } from './GameSettingsContext';
 import { Position } from '../types/Position';
 import { Move } from '../types/Move';
-import { animationTime } from '../constants/constants';
+import { afterAnimationTime, animationTime } from '../constants/constants';
 
 export const ComputerGamePage: FC = () => {
     const [position, setPosition] = useState<Position>(chessEngine.position);
@@ -87,9 +87,11 @@ export const ComputerGamePage: FC = () => {
 
                     setPosition(newPosition);
                     setWhoseMove('player');
-                }, animationTime);
+                }, animationTime + afterAnimationTime);
             };
-            doGetComputerMove();
+
+            //it is necessary for the animation of the transfer of the move to be displayed before doGetComputerMove is executed
+            setTimeout(doGetComputerMove, 1);
         }
     }, [whoseMove]);
 
