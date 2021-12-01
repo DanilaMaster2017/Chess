@@ -13,12 +13,12 @@ export const CountLabel: FC<Props> = ({ count }) => {
             css={css`
                 display: inline-block;
                 position: absolute;
-                right: -5px;
-                bottom: 0;
-                padding: 0 5px;
+                right: -2px;
+                bottom: 2px;
+                padding: 0 3px;
                 border-radius: 50%;
                 color: white;
-                font-size: 13px;
+                font-size: 11px;
                 font-weight: bold;
                 background-color: #f37021;
             `}

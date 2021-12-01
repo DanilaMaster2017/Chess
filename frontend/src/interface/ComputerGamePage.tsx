@@ -11,12 +11,17 @@ import { useGameSettingsContext } from './GameSettingsContext';
 import { Position } from '../types/Position';
 import { Move } from '../types/Move';
 import { afterAnimationTime, animationTime } from '../constants/constants';
+import { getPieceImage } from '../functions/getPieceImage';
 
 export const ComputerGamePage: FC = () => {
     const [position, setPosition] = useState<Position>(chessEngine.position);
 
     const { color, level, getTimeForGame } = useGameSettingsContext();
     const {
+        playerTakenPieces,
+        enemyTakenPieces,
+        setEnemyTakenPieces,
+        setPlayerTakenPieces,
         setPlayerInfo,
         setEnemyInfo,
         setPlayerTimeLeft,
@@ -62,17 +67,32 @@ export const ComputerGamePage: FC = () => {
             setPlayerTimeLeft(timeLeft);
             setEnemyTimeLeft(timeLeft);
         }
+    }, []);
 
+    useEffect(() => {
         setOnMove(() => {
             return async (move: Move) => {
                 let newPosition: Position;
                 newPosition = chessEngine.makeMove(move);
+
                 setPosition(newPosition);
+                if (move.takenPiece) {
+                    const map = new Map(playerTakenPieces);
+                    const pieceImageSrc = getPieceImage(move.takenPiece);
+
+                    if (map.has(pieceImageSrc)) {
+                        map.set(pieceImageSrc, map.get(pieceImageSrc)! + 1);
+                    } else {
+                        map.set(pieceImageSrc, 1);
+                    }
+
+                    setPlayerTakenPieces(map);
+                }
 
                 setWhoseMove('enemy');
             };
         });
-    }, []);
+    }, [playerTakenPieces]);
 
     useEffect(() => {
         if (whoseMove === 'enemy') {
@@ -86,6 +106,19 @@ export const ComputerGamePage: FC = () => {
                     const newPosition = chessEngine.makeMove(move);
 
                     setPosition(newPosition);
+                    if (move.takenPiece) {
+                        const map = new Map(enemyTakenPieces);
+                        const pieceImageSrc = getPieceImage(move.takenPiece);
+
+                        if (map.has(pieceImageSrc)) {
+                            map.set(pieceImageSrc, map.get(pieceImageSrc)! + 1);
+                        } else {
+                            map.set(pieceImageSrc, 1);
+                        }
+
+                        setEnemyTakenPieces(map);
+                    }
+
                     setWhoseMove('player');
                 }, animationTime + afterAnimationTime);
             };

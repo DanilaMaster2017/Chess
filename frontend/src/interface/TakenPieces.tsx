@@ -42,7 +42,7 @@ export const TakenPieces: FC<Props> = ({ takenPieces }) => {
     return (
         <div
             css={css`
-                padding: 5px 15px 33px;
+                padding: 3px 15px 31px;
                 height: 32px;
                 background-color: #f7f6f5;
                 border-top: 1px solid #d2d2d2;
