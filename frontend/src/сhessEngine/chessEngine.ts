@@ -55,6 +55,7 @@ enum PieceValue {
     rook = 550,
     bishop = 325,
     knight = 325,
+    checkmate = 30000,
 }
 
 const enemy: Players = {
@@ -1451,9 +1452,8 @@ class ChessEngine implements IChessEngine {
             result.alpha = -result.alpha;
             return result;
         } else {
-            //todo
             //if move undefined pat or mat
-            return { alpha: 0 };
+            return { alpha: node.shah.isZero() ? 0 : PieceValue.checkmate };
         }
     }
 
