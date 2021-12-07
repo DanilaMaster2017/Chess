@@ -41,6 +41,19 @@ interface IChessEngine {
     getComputerMove: (color: 'white' | 'black') => Promise<Move>;
     makeMove: (move: Move, node?: Node) => Position;
     isShah: (index: number, color: 'white' | 'black') => boolean;
+    checkGameOver: (color: 'white' | 'black') => GameOverReason | undefined;
+}
+
+enum GameOverReason {
+    checkmate,
+    resigning,
+    timeoutWin,
+    timeoutDraw,
+    stalemate,
+    deadPosition,
+    agreeDrawAfterOffer,
+    fiftyMoveRule,
+    threeFoldRepetitionRule,
 }
 
 enum DirectionOfAttack {
@@ -115,7 +128,13 @@ class ChessEngine implements IChessEngine {
     private isCastlingPossibleNow: Players;
     private castlingRooksPosition: Players;
 
+    private movesWithoutTakenCount: number;
+    private pastPositions: Players;
+
     constructor() {
+        this.movesWithoutTakenCount = 0;
+        this.pastPositions = { white: [], black: [] };
+
         this.rays = {
             minus7: [],
             minus8: [],
@@ -1280,7 +1299,27 @@ class ChessEngine implements IChessEngine {
     }
 
     public makeMove(move: Move, node?: Node): Position {
-        node = node ?? this.node;
+        const isGlobalNode = node ? false : true;
+
+        if (!node) {
+            node = this.node;
+
+            if (move.takenPiece || move.piece.type === PieceType.pawn) {
+                this.movesWithoutTakenCount = 0;
+            } else {
+                this.movesWithoutTakenCount++;
+            }
+
+            if (
+                move.takenPiece ||
+                move.piece.type === PieceType.pawn ||
+                (move.piece.type === PieceType.king &&
+                    move.from - move.to === 2)
+            ) {
+                this.pastPositions = { white: [], black: [] };
+            }
+        }
+
         const sign = move.piece.color === 'white' ? 1 : -1;
 
         node.score *= -1;
@@ -1367,6 +1406,27 @@ class ChessEngine implements IChessEngine {
             Math.abs(move.from - move.to) === 2 * sideSize
         ) {
             node.takingOnAisle = move.to - sign * sideSize;
+        }
+
+        //for threefold repetition rule
+        if (isGlobalNode) {
+            const color: 'white' | 'black' = move.piece.color;
+
+            this.pastPositions[enemy[color] as 'white' | 'black'].push(
+                cloneObject(node.position.origin) as Position
+            );
+
+            if (node.takingOnAisle !== undefined) {
+                const possibleTakingOnAisle = (this.pawnsMoves[
+                    color
+                ] as PawnsMoves).attacks[node.takingOnAisle].and(
+                    node.position.origin.pawn[enemy[color] as 'white' | 'black']
+                );
+
+                if (!possibleTakingOnAisle.isZero()) {
+                    this.pastPositions = { white: [], black: [] };
+                }
+            }
         }
 
         this.сalculateAttacksTo(node);
@@ -1727,6 +1787,117 @@ class ChessEngine implements IChessEngine {
         ).not();
 
         return !attacksToKing.and(notSelfPieces).isZero();
+    }
+
+    public checkGameOver(color: 'white' | 'black'): GameOverReason | undefined {
+        const movesCount: number = this.getAllMoves(this.node, color).length;
+
+        if (!this.node.shah.isZero() && movesCount === 0) {
+            return GameOverReason.checkmate;
+        }
+
+        if (movesCount === 0) {
+            return GameOverReason.stalemate;
+        }
+
+        if (this.movesWithoutTakenCount === 100) {
+            return GameOverReason.fiftyMoveRule;
+        }
+
+        const position: Position = this.node.position.origin;
+
+        if (
+            position.queen.white.isZero() &&
+            position.queen.black.isZero() &&
+            position.pawn.white.isZero() &&
+            position.pawn.black.isZero() &&
+            position.rook.white.isZero() &&
+            position.rook.black.isZero() &&
+            this.getOneCount(position.knight.white) < 2 &&
+            this.getOneCount(position.knight.black) < 2
+        ) {
+            if (
+                position.bishop.black.isZero() &&
+                position.bishop.white.isZero()
+            ) {
+                return GameOverReason.deadPosition;
+            } else if (
+                position.knight.black.isZero() &&
+                position.knight.white.isZero() &&
+                this.isBishopsOfSameColor(position.bishop.white) &&
+                this.isBishopsOfSameColor(position.bishop.black)
+            ) {
+                return GameOverReason.deadPosition;
+            }
+        }
+
+        const pastPositions: Position[] = this.pastPositions[color].slice(0);
+
+        while (pastPositions.length > 2) {
+            let isReapeat: boolean = false;
+            const position: Position = pastPositions.shift()!;
+
+            for (let i = 0; i < pastPositions.length; i++) {
+                if (this.isPositionsEquals(position, pastPositions[i])) {
+                    if (isReapeat) {
+                        return GameOverReason.threeFoldRepetitionRule;
+                    } else {
+                        isReapeat = true;
+                        pastPositions.splice(i, 1);
+                        i--;
+                    }
+                }
+            }
+        }
+
+        return;
+    }
+
+    //Bishops Of Same Color - однопольные
+    private isBishopsOfSameColor(bitboard: long): boolean {
+        let bishopCell: number = numberOfCells - bitboard.getNumBitsAbs();
+        bitboard = bitboard.and(this.setMask[bishopCell].not());
+
+        let bishopX: number = bishopCell % sideSize;
+        let bishopY: number = Math.floor(bishopCell / sideSize);
+
+        const bishopColor: number = (bishopX + bishopY) % 2;
+
+        while (!bitboard.isZero()) {
+            bishopCell = numberOfCells - bitboard.getNumBitsAbs();
+            bitboard = bitboard.and(this.setMask[bishopCell].not());
+
+            bishopX = bishopCell % sideSize;
+            bishopY = Math.floor(bishopCell / sideSize);
+
+            if ((bishopX + bishopY) % 2 !== bishopColor) {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
+    private isPositionsEquals(
+        position1: Position,
+        position2: Position
+    ): boolean {
+        for (let key in position1) {
+            if (
+                (position1[key as keyof Position]['white'] as long).equals(
+                    position2[key as keyof Position]['white']
+                )
+            )
+                return false;
+
+            if (
+                (position1[key as keyof Position]['black'] as long).equals(
+                    position2[key as keyof Position]['black']
+                )
+            )
+                return false;
+        }
+        return true;
     }
 }
 

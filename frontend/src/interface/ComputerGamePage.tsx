@@ -29,6 +29,7 @@ export const ComputerGamePage: FC = () => {
         setWhoseMove,
         whoseMove,
         setOnMove,
+        playerInfo,
         enemyInfo,
         setEnemyMove: setComputerMove,
     } = useInfoContext();
@@ -89,7 +90,16 @@ export const ComputerGamePage: FC = () => {
                     setPlayerTakenPieces(map);
                 }
 
-                setWhoseMove('enemy');
+                const gameOverReason = chessEngine.checkGameOver(
+                    enemyInfo.color
+                );
+
+                if (gameOverReason) {
+                    console.log(gameOverReason);
+                    setWhoseMove('gameOver');
+                } else {
+                    setWhoseMove('enemy');
+                }
             };
         });
     }, [playerTakenPieces]);
@@ -119,7 +129,16 @@ export const ComputerGamePage: FC = () => {
                         setEnemyTakenPieces(map);
                     }
 
-                    setWhoseMove('player');
+                    const gameOverReason = chessEngine.checkGameOver(
+                        playerInfo.color
+                    );
+
+                    if (gameOverReason) {
+                        console.log(gameOverReason);
+                        setWhoseMove('gameOver');
+                    } else {
+                        setWhoseMove('player');
+                    }
                 }, animationTime + afterAnimationTime);
             };
 
