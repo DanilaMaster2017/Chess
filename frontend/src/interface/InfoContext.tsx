@@ -19,7 +19,7 @@ interface IInfoContext {
     playerTimeLeft?: Date;
     enemyTimeLeft?: Date;
     isReverse: boolean;
-    whoseMove: 'player' | 'enemy';
+    whoseMove: 'player' | 'enemy' | 'gameOver';
     setPlayerInfo: (v: PlayerInfo) => void;
     setEnemyInfo: (v: PlayerInfo) => void;
     setPlayerTakenPieces: (v: Map<string, number>) => void;
@@ -27,13 +27,15 @@ interface IInfoContext {
     setPlayerTimeLeft: (v: Date) => void;
     setEnemyTimeLeft: (v: Date) => void;
     setIsReverse: (v: boolean) => void;
-    setWhoseMove: (v: 'player' | 'enemy') => void;
+    setWhoseMove: (v: 'player' | 'enemy' | 'gameOver') => void;
     onMove: (m: Move) => Promise<void>;
     setOnMove: (f: SetStateAction<(m: Move) => Promise<void>>) => void;
-    lastMove: long;
-    setLastMove: (f: number, t: number) => void;
     enemyMove: Move;
     setEnemyMove: (cm: Move) => void;
+    lastMove: long;
+    setLastMove: (f: number, t: number) => void;
+    shahCell: number | undefined;
+    setShahCell: (cell: number | undefined) => void;
 }
 
 const defaultplayerInfo: PlayerInfo = {
@@ -70,6 +72,8 @@ const InfoContextProvider = createContext<IInfoContext>({
     setOnMove: (f: SetStateAction<(m: Move) => Promise<void>>) => {},
     setLastMove: () => {},
     setEnemyMove: () => {},
+    shahCell: undefined,
+    setShahCell: () => {},
 });
 
 export function useInfoContext() {
@@ -88,7 +92,7 @@ export const InfoContext: FC = ({ children }) => {
     const [playerTimeLeft, setPlayerTimeLeft] = useState<Date | undefined>();
     const [enemyTimeLeft, setEnemyTimeLeft] = useState<Date | undefined>();
     const [isReverse, setIsReverse] = useState<boolean>(defaultIsReverse);
-    const [whoseMove, setWhoseMove] = useState<'player' | 'enemy'>(
+    const [whoseMove, setWhoseMove] = useState<'player' | 'enemy' | 'gameOver'>(
         defaultWhoseMove
     );
     const [onMove, setOnMove] = useState<(m: Move) => Promise<void>>(() => {
@@ -96,6 +100,7 @@ export const InfoContext: FC = ({ children }) => {
     });
 
     const [lastMove, setLastMoveState] = useState<long>(long.ZERO);
+    const [shahCell, setShahCell] = useState<number | undefined>();
 
     const setLastMove = (from: number, to: number) => {
         setLastMoveState(
@@ -121,6 +126,7 @@ export const InfoContext: FC = ({ children }) => {
                 onMove,
                 lastMove,
                 enemyMove,
+                shahCell,
                 setPlayerInfo,
                 setEnemyInfo,
                 setPlayerTakenPieces,
@@ -132,6 +138,7 @@ export const InfoContext: FC = ({ children }) => {
                 setOnMove,
                 setLastMove,
                 setEnemyMove,
+                setShahCell,
             }}
         >
             {children}

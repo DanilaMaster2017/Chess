@@ -14,6 +14,7 @@ import {
 } from '../constants/constants';
 import { Players } from '../types/Players';
 import { PieceType } from '../types/PieceType';
+import { chessEngine } from '../сhessEngine/chessEngine';
 
 interface Props {
     onClick?: () => void;
@@ -47,6 +48,8 @@ export const Cell: FC<Props> = ({
         setLastMove,
         whoseMove,
         enemyMove,
+        shahCell,
+        setShahCell,
     } = useInfoContext();
 
     const {
@@ -292,15 +295,29 @@ export const Cell: FC<Props> = ({
             pieceImage.current!.style.top = top;
             pieceImage.current!.style.left = left;
 
+            if (shahCell !== undefined) {
+                setShahCell(undefined);
+            }
             setLastMove(enemyMove.from, enemyMove.to);
         }
     }, [enemyMove]);
+
+    useEffect(() => {
+        if (piece && piece.type === PieceType.king) {
+            if (chessEngine.isShah(cellNumber, piece.color)) {
+                setShahCell(cellNumber);
+            }
+        }
+    }, [whoseMove]);
 
     let onClickByCell;
 
     if (status & CellStatus.tracking) {
         onClickByCell = () => {
             resetBoard();
+            if (shahCell !== undefined) {
+                setShahCell(undefined);
+            }
 
             if (pieceImage.current) {
                 //piece taken
@@ -356,7 +373,7 @@ export const Cell: FC<Props> = ({
                         transition: top ${animationTime}ms linear,
                             left ${animationTime}ms linear;
 
-                        ${status & CellStatus.shah
+                        ${shahCell === cellNumber
                             ? `background: radial-gradient(
                             red 0%,
                             rgba(220, 0, 0, 128) 25%,
