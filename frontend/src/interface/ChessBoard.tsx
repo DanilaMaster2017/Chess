@@ -1,17 +1,16 @@
 /** @jsxRuntime classic */
 /** @jsx jsx */
 import { css, jsx } from '@emotion/react';
-import { FC, useEffect, useState } from 'react';
+import { FC } from 'react';
 import { Cell } from './Cell';
-import { useInfoContext } from './InfoContext';
+import { useGameInfoContext } from './GameInfoContext';
 import { Piece } from '../types/Piece';
 import long from 'long';
 import { Position } from '../types/Position';
-import { CellStatus } from '../types/CellStatus';
-import { chessEngine } from '../сhessEngine/chessEngine';
 import { MoveContext } from './MoveContext';
 import { numberOfCells, sideSize } from '../constants/constants';
 import { PieceType } from '../types/PieceType';
+import { useBoardContext } from './BoardContext';
 
 const letters = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
 
@@ -53,24 +52,8 @@ const getPieceFromPosition = (
 };
 
 export const ChessBoard: FC<Props> = ({ position }) => {
-    const {
-        isReverse,
-        whoseMove,
-        playerInfo,
-        onMove,
-        lastMove,
-        setLastMove,
-    } = useInfoContext();
-
-    const [track, setTrack] = useState<long>(long.ZERO);
-    const [activeCell, setActiveCell] = useState<number>(-1);
-    const [activePiece, setActivePiece] = useState<Piece>();
-
-    const resetBoard = () => {
-        setTrack(long.ZERO);
-        setActiveCell(-1);
-        setActivePiece(undefined);
-    };
+    const { isReverse, playerInfo } = useGameInfoContext();
+    const { lastMove, track } = useBoardContext();
 
     const cells = [];
 
@@ -97,58 +80,15 @@ export const ChessBoard: FC<Props> = ({ position }) => {
         cellBitboard = long.ONE;
     }
 
-    let selectPieceClick;
-
     for (let i = start; i !== end; i += increment) {
         for (let j = start; j !== end; j += increment) {
             const piece = getPieceFromPosition(position, cellBitboard);
-            const cellNumber = i * sideSize + j;
-
-            if (whoseMove === 'player') {
-                selectPieceClick = () => {
-                    setActiveCell(cellNumber);
-                    setActivePiece(piece);
-                    setTrack(chessEngine.getPossibleMoves(cellNumber, piece!));
-                };
-            }
-
-            let status: CellStatus = 0;
-
-            if (activeCell === i * sideSize + j) status |= CellStatus.active;
-            if (!track.and(cellBitboard).isZero())
-                status |= CellStatus.tracking;
-            if (!lastMove.and(cellBitboard).isZero())
-                status |= CellStatus.lastMove;
-
-            let onClick;
-            if (
-                piece &&
-                piece.color === playerInfo.color &&
-                cellNumber !== activeCell
-            ) {
-                onClick = selectPieceClick;
-            } else if (status & CellStatus.tracking) {
-                onClick = () => {
-                    onMove({
-                        from: activeCell,
-                        to: i * sideSize + j,
-                        piece: activePiece!,
-                        takenPiece: piece,
-                    });
-                };
-            } else {
-                onClick = resetBoard;
-            }
 
             cells.push(
                 <Cell
                     piece={piece}
-                    onClick={onClick}
-                    resetBoard={resetBoard}
-                    setLastMoveFromCell={() => {
-                        setLastMove(activeCell, cellNumber);
-                    }}
-                    status={status}
+                    isTracking={!track.and(cellBitboard).isZero()}
+                    isLastMove={!lastMove.and(cellBitboard).isZero()}
                     key={'' + (i * sideSize + j)}
                     x={j}
                     y={i}

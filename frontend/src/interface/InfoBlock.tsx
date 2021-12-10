@@ -3,11 +3,11 @@
 import { css, jsx } from '@emotion/react';
 import { FC } from 'react';
 import { ControlPanel } from './ControlPanel';
-import { useInfoContext } from './InfoContext';
+import { useGameInfoContext } from './GameInfoContext';
 import { GameInfo } from './GameInfo';
 
 export const InfoBlock: FC = () => {
-    const { isReverse } = useInfoContext();
+    const { isReverse } = useGameInfoContext();
 
     const flexDirection = isReverse ? 'column-reverse' : 'column';
 

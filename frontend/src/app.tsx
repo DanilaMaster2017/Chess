@@ -6,7 +6,8 @@ import { Header } from './interface/Header';
 import { StartPage } from './interface/StartPage';
 import { GameSettingsContext } from './interface/GameSettingsContext';
 import { ComputerGamePage } from './interface/ComputerGamePage';
-import { InfoContext } from './interface/InfoContext';
+import { GameInfoContext } from './interface/GameInfoContext';
+import { BoardContext } from './interface/BoardContext';
 import { NotFoundPage } from './interface/NotFoundPage';
 import { GameRequestContext } from './interface/GameRequestContext';
 
@@ -34,9 +35,11 @@ function App() {
                             path="/computer-game"
                             component={ComputerGamePage}
                         >
-                            <InfoContext>
-                                <ComputerGamePage></ComputerGamePage>
-                            </InfoContext>
+                            <GameInfoContext>
+                                <BoardContext>
+                                    <ComputerGamePage></ComputerGamePage>
+                                </BoardContext>
+                            </GameInfoContext>
                         </Route>
                         <Route component={NotFoundPage}></Route>
                     </Switch>

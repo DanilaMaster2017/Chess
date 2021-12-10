@@ -4,9 +4,8 @@ import { css, jsx } from '@emotion/react';
 import React, { FC, useRef, useEffect } from 'react';
 import { Piece } from '../types/Piece';
 import { getPieceImage } from '../functions/getPieceImage';
-import { CellStatus } from '../types/CellStatus';
 import { useMoveContext } from './MoveContext';
-import { useInfoContext } from './InfoContext';
+import { useGameInfoContext } from './GameInfoContext';
 import {
     afterAnimationTime,
     animationTime,
@@ -15,42 +14,44 @@ import {
 import { Players } from '../types/Players';
 import { PieceType } from '../types/PieceType';
 import { chessEngine } from '../сhessEngine/chessEngine';
+import { useBoardContext } from './BoardContext';
+import long from 'long';
 
 interface Props {
-    onClick?: () => void;
-    resetBoard: () => void;
+    isTracking: boolean;
+    isLastMove: boolean;
     piece?: Piece;
-    status: CellStatus;
     letter?: string;
     digit?: string;
     x: number;
     y: number;
-    setLastMoveFromCell: () => void;
 }
 
 export const Cell: FC<Props> = ({
     piece,
-    status,
+    isTracking,
+    isLastMove,
     x,
     y,
     letter,
     digit,
-    onClick,
-    resetBoard,
-    setLastMoveFromCell,
 }) => {
     const pieceImage = useRef<HTMLImageElement | null>(null);
 
+    const { playerInfo, isReverse, whoseMove } = useGameInfoContext();
+
     const {
-        playerInfo,
-        isReverse,
         onMove,
         setLastMove,
-        whoseMove,
         enemyMove,
         shahCell,
         setShahCell,
-    } = useInfoContext();
+        activeCell,
+        setActiveCell,
+        activePiece,
+        setActivePiece,
+        setTrack,
+    } = useBoardContext();
 
     const {
         onPieceMove,
@@ -70,9 +71,9 @@ export const Cell: FC<Props> = ({
 
     let backlightColor;
 
-    if (status & CellStatus.active) {
+    if (activeCell === cellNumber) {
         backlightColor = trackingColor;
-    } else if (status & CellStatus.lastMove) {
+    } else if (isLastMove) {
         backlightColor = 'rgba(155,199,0,0.41)';
     } else {
         backlightColor = 'transparent';
@@ -88,6 +89,18 @@ export const Cell: FC<Props> = ({
     const left = boardSide
         ? boardOneEighth * x + '%'
         : boardOneEighth * (sideSize - 1 - x) + '%';
+
+    const resetBoard = () => {
+        setTrack(long.ZERO);
+        setActiveCell(-1);
+        setActivePiece(undefined);
+    };
+
+    const selectPiece = () => {
+        setActiveCell(cellNumber);
+        setActivePiece(piece);
+        setTrack(chessEngine.getPossibleMoves(cellNumber, piece!));
+    };
 
     useEffect(() => {
         if (pieceImage.current) {
@@ -120,8 +133,8 @@ export const Cell: FC<Props> = ({
                 pieceImage.current.onmousedown = (e) => {
                     let isSameCell: boolean = true;
 
-                    if (!(status & CellStatus.active)) {
-                        onClick!();
+                    if (activeCell !== cellNumber) {
+                        selectPiece();
                     } else {
                         isSameCell = false;
                     }
@@ -219,21 +232,19 @@ export const Cell: FC<Props> = ({
         }
     }, [onMove, piece, setLastMove, whoseMove]);
 
-    const onMouseEnter =
-        status & CellStatus.tracking
-            ? () => setHoverCell(cellNumber)
-            : undefined;
-    const onMouseLeave =
-        status & CellStatus.tracking ? () => setHoverCell(-1) : undefined;
+    const onMouseEnter = isTracking
+        ? () => setHoverCell(cellNumber)
+        : undefined;
+    const onMouseLeave = isTracking ? () => setHoverCell(-1) : undefined;
 
     useEffect(() => {
-        if (!(status & CellStatus.tracking)) {
+        if (!isTracking) {
             setHoverCell(-1);
         }
-    }, [status]);
+    }, [isTracking]);
 
     useEffect(() => {
-        if (status & CellStatus.active) {
+        if (activeCell === cellNumber) {
             setOnPieceMove((prevState) => {
                 return (top: string, left: string) => {
                     //for castling animate
@@ -257,7 +268,7 @@ export const Cell: FC<Props> = ({
                 };
             });
         }
-    }, [status, boardSide]);
+    }, [activeCell, boardSide]);
 
     useEffect(() => {
         if (pieceImage.current && enemyMove.to === cellNumber) {
@@ -310,10 +321,15 @@ export const Cell: FC<Props> = ({
         }
     }, [whoseMove]);
 
-    let onClickByCell;
-
-    if (status & CellStatus.tracking) {
-        onClickByCell = () => {
+    let onClick;
+    if (
+        piece &&
+        piece.color === playerInfo.color &&
+        cellNumber !== activeCell
+    ) {
+        onClick = selectPiece;
+    } else if (isTracking) {
+        onClick = () => {
             resetBoard();
             if (shahCell !== undefined) {
                 setShahCell(undefined);
@@ -328,21 +344,28 @@ export const Cell: FC<Props> = ({
                 }, animationTime + afterAnimationTime - 1); // -1 so the front piece doesn't blink
             }
 
-            setLastMoveFromCell();
+            setLastMove(activeCell!, cellNumber);
             onPieceMove(top, left);
-            setTimeout(onClick!, animationTime + afterAnimationTime);
+            setTimeout(() => {
+                onMove({
+                    from: activeCell!,
+                    to: cellNumber,
+                    piece: activePiece!,
+                    takenPiece: piece,
+                });
+            }, animationTime + afterAnimationTime);
         };
     } else {
-        onClickByCell = onClick;
+        onClick = resetBoard;
     }
 
     return (
         <div
             id={cellNumber.toString()}
-            className={status & CellStatus.tracking ? 'track' : ''}
+            className={isTracking ? 'track' : ''}
             data-piece-type={piece?.type}
             data-piece-color={piece?.color}
-            onClick={onClickByCell}
+            onClick={whoseMove === 'player' ? onClick : undefined}
             onMouseLeave={onMouseLeave}
             onMouseEnter={onMouseEnter}
             css={css`
@@ -396,9 +419,7 @@ export const Cell: FC<Props> = ({
                     ${hoverCell === cellNumber
                         ? `background-color: ${hoverColor};`
                         : ''}
-                    ${status & CellStatus.tracking &&
-                    piece &&
-                    hoverCell !== cellNumber
+                    ${isTracking && piece && hoverCell !== cellNumber
                         ? `&:after {
                             content: "";
                             position: absolute;
@@ -439,19 +460,17 @@ export const Cell: FC<Props> = ({
                         {digit}
                     </span>
                 )}
-                {!!(status & CellStatus.tracking) &&
-                    !piece &&
-                    hoverCell !== cellNumber && (
-                        <div
-                            css={css`
-                                margin: auto;
-                                width: 25%;
-                                height: 25%;
-                                border-radius: 50%;
-                                background-color: ${trackingColor};
-                            `}
-                        ></div>
-                    )}
+                {isTracking && !piece && hoverCell !== cellNumber && (
+                    <div
+                        css={css`
+                            margin: auto;
+                            width: 25%;
+                            height: 25%;
+                            border-radius: 50%;
+                            background-color: ${trackingColor};
+                        `}
+                    ></div>
+                )}
             </div>
         </div>
     );

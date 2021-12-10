@@ -6,17 +6,20 @@ import { ChessBoard } from './ChessBoard';
 import { InfoBlock } from './InfoBlock';
 import { Page } from './Page';
 import { chessEngine } from '../сhessEngine/chessEngine';
-import { useInfoContext } from './InfoContext';
+import { useGameInfoContext } from './GameInfoContext';
 import { useGameSettingsContext } from './GameSettingsContext';
 import { Position } from '../types/Position';
 import { Move } from '../types/Move';
 import { afterAnimationTime, animationTime } from '../constants/constants';
 import { getPieceImage } from '../functions/getPieceImage';
+import { useBoardContext } from './BoardContext';
 
 export const ComputerGamePage: FC = () => {
     const [position, setPosition] = useState<Position>(chessEngine.position);
 
     const { color, level, getTimeForGame } = useGameSettingsContext();
+    const { setOnMove, setEnemyMove } = useBoardContext();
+
     const {
         playerTakenPieces,
         enemyTakenPieces,
@@ -28,11 +31,9 @@ export const ComputerGamePage: FC = () => {
         setEnemyTimeLeft,
         setWhoseMove,
         whoseMove,
-        setOnMove,
         playerInfo,
         enemyInfo,
-        setEnemyMove: setComputerMove,
-    } = useInfoContext();
+    } = useGameInfoContext();
 
     useEffect(() => {
         let playerColor: 'white' | 'black';
@@ -110,7 +111,7 @@ export const ComputerGamePage: FC = () => {
                 const move: Move = await chessEngine.getComputerMove(
                     enemyInfo.color
                 );
-                setComputerMove(move);
+                setEnemyMove(move);
 
                 setTimeout(() => {
                     const newPosition = chessEngine.makeMove(move);

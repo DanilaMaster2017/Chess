@@ -1,17 +1,7 @@
-import long from 'long';
-import React, {
-    FC,
-    useState,
-    useContext,
-    createContext,
-    SetStateAction,
-} from 'react';
-import { numberOfCells } from '../constants/constants';
-import { Move } from '../types/Move';
-import { PieceType } from '../types/PieceType';
+import React, { FC, useState, useContext, createContext } from 'react';
 import { PlayerInfo } from '../types/PlayerInfo';
 
-interface IInfoContext {
+interface IGameInfoContext {
     playerInfo: PlayerInfo;
     enemyInfo: PlayerInfo;
     playerTakenPieces: Map<string, number>;
@@ -28,14 +18,6 @@ interface IInfoContext {
     setEnemyTimeLeft: (v: Date) => void;
     setIsReverse: (v: boolean) => void;
     setWhoseMove: (v: 'player' | 'enemy' | 'gameOver') => void;
-    onMove: (m: Move) => Promise<void>;
-    setOnMove: (f: SetStateAction<(m: Move) => Promise<void>>) => void;
-    enemyMove: Move;
-    setEnemyMove: (cm: Move) => void;
-    lastMove: long;
-    setLastMove: (f: number, t: number) => void;
-    shahCell: number | undefined;
-    setShahCell: (cell: number | undefined) => void;
 }
 
 const defaultplayerInfo: PlayerInfo = {
@@ -45,22 +27,14 @@ const defaultplayerInfo: PlayerInfo = {
 const defaultTakenPieces: Map<string, number> = new Map();
 const defaultIsReverse = false;
 const defaultWhoseMove = 'player';
-const defaultMove: Move = {
-    from: -1,
-    to: -1,
-    piece: { color: 'white', type: PieceType.bishop },
-};
 
-const InfoContextProvider = createContext<IInfoContext>({
+const GameInfoContextProvider = createContext<IGameInfoContext>({
     playerInfo: defaultplayerInfo,
     enemyInfo: defaultplayerInfo,
     playerTakenPieces: defaultTakenPieces,
     enemyTakenPieces: defaultTakenPieces,
     whoseMove: defaultWhoseMove,
     isReverse: defaultIsReverse,
-    onMove: async (m: Move) => {},
-    lastMove: long.ZERO,
-    enemyMove: defaultMove,
     setPlayerInfo: () => {},
     setEnemyInfo: () => {},
     setPlayerTakenPieces: () => {},
@@ -69,18 +43,13 @@ const InfoContextProvider = createContext<IInfoContext>({
     setEnemyTimeLeft: () => {},
     setIsReverse: () => {},
     setWhoseMove: () => {},
-    setOnMove: (f: SetStateAction<(m: Move) => Promise<void>>) => {},
-    setLastMove: () => {},
-    setEnemyMove: () => {},
-    shahCell: undefined,
-    setShahCell: () => {},
 });
 
-export function useInfoContext() {
-    return useContext(InfoContextProvider);
+export function useGameInfoContext() {
+    return useContext(GameInfoContextProvider);
 }
 
-export const InfoContext: FC = ({ children }) => {
+export const GameInfoContext: FC = ({ children }) => {
     const [playerInfo, setPlayerInfo] = useState<PlayerInfo>(defaultplayerInfo);
     const [enemyInfo, setEnemyInfo] = useState<PlayerInfo>(defaultplayerInfo);
     const [playerTakenPieces, setPlayerTakenPieces] = useState<
@@ -95,25 +64,9 @@ export const InfoContext: FC = ({ children }) => {
     const [whoseMove, setWhoseMove] = useState<'player' | 'enemy' | 'gameOver'>(
         defaultWhoseMove
     );
-    const [onMove, setOnMove] = useState<(m: Move) => Promise<void>>(() => {
-        return async (m: Move) => {};
-    });
-
-    const [lastMove, setLastMoveState] = useState<long>(long.ZERO);
-    const [shahCell, setShahCell] = useState<number | undefined>();
-
-    const setLastMove = (from: number, to: number) => {
-        setLastMoveState(
-            long.ONE.shiftLeft(numberOfCells - 1 - to).or(
-                long.ONE.shiftLeft(numberOfCells - 1 - from)
-            )
-        );
-    };
-
-    const [enemyMove, setEnemyMove] = useState<Move>(defaultMove);
 
     return (
-        <InfoContextProvider.Provider
+        <GameInfoContextProvider.Provider
             value={{
                 playerInfo,
                 enemyInfo,
@@ -123,10 +76,6 @@ export const InfoContext: FC = ({ children }) => {
                 enemyTimeLeft,
                 isReverse,
                 whoseMove,
-                onMove,
-                lastMove,
-                enemyMove,
-                shahCell,
                 setPlayerInfo,
                 setEnemyInfo,
                 setPlayerTakenPieces,
@@ -135,13 +84,9 @@ export const InfoContext: FC = ({ children }) => {
                 setEnemyTimeLeft,
                 setIsReverse,
                 setWhoseMove,
-                setOnMove,
-                setLastMove,
-                setEnemyMove,
-                setShahCell,
             }}
         >
             {children}
-        </InfoContextProvider.Provider>
+        </GameInfoContextProvider.Provider>
     );
 };

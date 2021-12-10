@@ -2,7 +2,7 @@
 /** @jsx jsx */
 import { css, jsx } from '@emotion/react';
 import { FC } from 'react';
-import { useInfoContext } from './InfoContext';
+import { useGameInfoContext } from './GameInfoContext';
 import { UserInfo } from './UserInfo';
 import { Timer } from './Timer';
 import { TakenPieces } from './TakenPieces';
@@ -24,7 +24,7 @@ export const GameInfo: FC<Props> = ({ person }) => {
         playerTimeLeft,
         enemyTimeLeft,
         whoseMove,
-    } = useInfoContext();
+    } = useGameInfoContext();
 
     if (person === 'player') {
         personInfo = playerInfo;

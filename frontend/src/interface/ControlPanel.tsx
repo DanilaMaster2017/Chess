@@ -3,10 +3,10 @@
 import { css, jsx } from '@emotion/react';
 import { FC } from 'react';
 import { ControlButton } from './ControlButton';
-import { useInfoContext } from './InfoContext';
+import { useGameInfoContext } from './GameInfoContext';
 
 export const ControlPanel: FC = () => {
-    const { isReverse, setIsReverse } = useInfoContext();
+    const { isReverse, setIsReverse } = useGameInfoContext();
     const toggleReverse = () => {
         setIsReverse(!isReverse);
     };
