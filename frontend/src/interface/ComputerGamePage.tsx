@@ -21,10 +21,10 @@ export const ComputerGamePage: FC = () => {
     const { setOnMove, setEnemyMove } = useBoardContext();
 
     const {
-        playerTakenPieces,
-        enemyTakenPieces,
-        setEnemyTakenPieces,
-        setPlayerTakenPieces,
+        playerCapturedPieces,
+        enemyCapturedPieces,
+        setEnemyCapturedPieces,
+        setPlayerCapturedPieces,
         setPlayerInfo,
         setEnemyInfo,
         setPlayerTimeLeft,
@@ -78,9 +78,9 @@ export const ComputerGamePage: FC = () => {
                 newPosition = chessEngine.makeMove(move);
 
                 setPosition(newPosition);
-                if (move.takenPiece) {
-                    const map = new Map(playerTakenPieces);
-                    const pieceImageSrc = getPieceImage(move.takenPiece);
+                if (move.capturedPiece) {
+                    const map = new Map(playerCapturedPieces);
+                    const pieceImageSrc = getPieceImage(move.capturedPiece);
 
                     if (map.has(pieceImageSrc)) {
                         map.set(pieceImageSrc, map.get(pieceImageSrc)! + 1);
@@ -88,7 +88,7 @@ export const ComputerGamePage: FC = () => {
                         map.set(pieceImageSrc, 1);
                     }
 
-                    setPlayerTakenPieces(map);
+                    setPlayerCapturedPieces(map);
                 }
 
                 const gameOverReason = chessEngine.checkGameOver(
@@ -103,7 +103,7 @@ export const ComputerGamePage: FC = () => {
                 }
             };
         });
-    }, [playerTakenPieces]);
+    }, [playerCapturedPieces]);
 
     useEffect(() => {
         if (whoseMove === 'enemy') {
@@ -117,9 +117,9 @@ export const ComputerGamePage: FC = () => {
                     const newPosition = chessEngine.makeMove(move);
 
                     setPosition(newPosition);
-                    if (move.takenPiece) {
-                        const map = new Map(enemyTakenPieces);
-                        const pieceImageSrc = getPieceImage(move.takenPiece);
+                    if (move.capturedPiece) {
+                        const map = new Map(enemyCapturedPieces);
+                        const pieceImageSrc = getPieceImage(move.capturedPiece);
 
                         if (map.has(pieceImageSrc)) {
                             map.set(pieceImageSrc, map.get(pieceImageSrc)! + 1);
@@ -127,7 +127,7 @@ export const ComputerGamePage: FC = () => {
                             map.set(pieceImageSrc, 1);
                         }
 
-                        setEnemyTakenPieces(map);
+                        setEnemyCapturedPieces(map);
                     }
 
                     const gameOverReason = chessEngine.checkGameOver(

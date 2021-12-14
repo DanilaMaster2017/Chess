@@ -4,6 +4,6 @@ export interface Move {
     from: number;
     to: number;
     piece: Piece;
-    takenPiece?: Piece;
-    replacePiece?: Piece;
+    capturedPiece?: Piece;
+    promotedPiece?: Piece;
 }

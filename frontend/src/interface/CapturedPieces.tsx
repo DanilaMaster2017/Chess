@@ -5,16 +5,16 @@ import { FC, ReactElement } from 'react';
 import { CountLabel } from './CountLabel';
 
 interface Props {
-    takenPieces: Map<string, number>;
+    capturedPieces: Map<string, number>;
 }
 
-export const TakenPieces: FC<Props> = ({ takenPieces }) => {
+export const CapturedPieces: FC<Props> = ({ capturedPieces }) => {
     const imgSize = 26 + 'px';
 
-    const generateTakenPieces = () => {
+    const generateCapturedPieces = () => {
         const pieceImages: ReactElement[] = [];
 
-        takenPieces.forEach((count, piece) => {
+        capturedPieces.forEach((count, piece) => {
             pieceImages.push(
                 <span
                     css={css`
@@ -48,7 +48,7 @@ export const TakenPieces: FC<Props> = ({ takenPieces }) => {
                 border-top: 1px solid #d2d2d2;
             `}
         >
-            {generateTakenPieces()}
+            {generateCapturedPieces()}
         </div>
     );
 };

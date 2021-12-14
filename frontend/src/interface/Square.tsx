@@ -27,7 +27,7 @@ interface Props {
     y: number;
 }
 
-export const Cell: FC<Props> = ({
+export const Square: FC<Props> = ({
     piece,
     isTracking,
     isLastMove,
@@ -44,10 +44,10 @@ export const Cell: FC<Props> = ({
         onMove,
         setLastMove,
         enemyMove,
-        shahCell,
-        setShahCell,
-        activeCell,
-        setActiveCell,
+        checkSquare,
+        setCheckSquare,
+        activeSquare,
+        setActiveSquare,
         activePiece,
         setActivePiece,
         setTrack,
@@ -58,11 +58,11 @@ export const Cell: FC<Props> = ({
         setOnPieceMove,
         castlingRooks,
         setCastlingRooks,
-        hoverCell,
-        setHoverCell,
+        hoverSquare,
+        setHoverSquare,
     } = useMoveContext();
 
-    const cellNumber = x + y * sideSize;
+    const squareNumber = x + y * sideSize;
     const boardOneEighth = 100 / sideSize;
     const backgroundColor = (x + y) % 2 ? '#B58863' : '#F0D9B5';
     const symbolСolor = (x + y) % 2 ? '#F0D9B5' : '#B58863';
@@ -71,7 +71,7 @@ export const Cell: FC<Props> = ({
 
     let backlightColor;
 
-    if (activeCell === cellNumber) {
+    if (activeSquare === squareNumber) {
         backlightColor = trackingColor;
     } else if (isLastMove) {
         backlightColor = 'rgba(155,199,0,0.41)';
@@ -92,14 +92,14 @@ export const Cell: FC<Props> = ({
 
     const resetBoard = () => {
         setTrack(long.ZERO);
-        setActiveCell(-1);
+        setActiveSquare(-1);
         setActivePiece(undefined);
     };
 
     const selectPiece = () => {
-        setActiveCell(cellNumber);
+        setActiveSquare(squareNumber);
         setActivePiece(piece);
-        setTrack(chessEngine.getPossibleMoves(cellNumber, piece!));
+        setTrack(chessEngine.getPossibleMoves(squareNumber, piece!));
     };
 
     useEffect(() => {
@@ -110,14 +110,14 @@ export const Cell: FC<Props> = ({
     }, [left, top]);
 
     useEffect(() => {
-        if (cellNumber === 0) {
+        if (squareNumber === 0) {
             setCastlingRooks((prev: Players) => {
                 return {
                     white: pieceImage,
                     black: prev.black,
                 };
             });
-        } else if (cellNumber === 56) {
+        } else if (squareNumber === 56) {
             setCastlingRooks((prev: Players) => {
                 return {
                     white: prev.white,
@@ -131,12 +131,12 @@ export const Cell: FC<Props> = ({
         if (pieceImage.current && piece?.color === playerInfo.color) {
             if (whoseMove === 'player') {
                 pieceImage.current.onmousedown = (e) => {
-                    let isSameCell: boolean = true;
+                    let isSameSquare: boolean = true;
 
-                    if (activeCell !== cellNumber) {
+                    if (activeSquare !== squareNumber) {
                         selectPiece();
                     } else {
-                        isSameCell = false;
+                        isSameSquare = false;
                     }
 
                     let originalStyle = getComputedStyle(pieceImage.current!);
@@ -163,7 +163,7 @@ export const Cell: FC<Props> = ({
 
                     moveAt(e.pageX, e.pageY);
 
-                    let hoverCell: HTMLDivElement | undefined | null;
+                    let hoverSquare: HTMLDivElement | undefined | null;
                     const onMouseMove = (e: MouseEvent) => {
                         moveAt(e.pageX, e.pageY);
 
@@ -174,46 +174,48 @@ export const Cell: FC<Props> = ({
                         );
                         dragablePieceImage.hidden = false;
 
-                        hoverCell = elemBelow?.closest('[id] .track');
+                        hoverSquare = elemBelow?.closest('[id] .track');
 
-                        if (hoverCell) {
-                            setHoverCell(+hoverCell.id);
+                        if (hoverSquare) {
+                            setHoverSquare(+hoverSquare.id);
                         } else {
-                            setHoverCell(-1);
+                            setHoverSquare(-1);
                         }
 
-                        const belowCell = elemBelow?.closest('[id]');
-                        if (belowCell && isSameCell) {
-                            isSameCell = +belowCell.id === cellNumber;
+                        const belowSquare = elemBelow?.closest('[id]');
+                        if (belowSquare && isSameSquare) {
+                            isSameSquare = +belowSquare.id === squareNumber;
                         } else {
-                            isSameCell = false;
+                            isSameSquare = false;
                         }
                     };
 
                     document.addEventListener('mousemove', onMouseMove);
 
                     dragablePieceImage.onmouseup = function () {
-                        if (hoverCell) {
-                            let takenPiece: Piece | undefined;
-                            if (hoverCell.dataset.pieceType) {
-                                takenPiece = {
-                                    type: parseInt(hoverCell.dataset.pieceType),
-                                    color: hoverCell.dataset.pieceColor as
+                        if (hoverSquare) {
+                            let capturedPiece: Piece | undefined;
+                            if (hoverSquare.dataset.pieceType) {
+                                capturedPiece = {
+                                    type: parseInt(
+                                        hoverSquare.dataset.pieceType
+                                    ),
+                                    color: hoverSquare.dataset.pieceColor as
                                         | 'white'
                                         | 'black',
                                 };
                             }
 
                             onMove({
-                                from: cellNumber,
-                                to: +hoverCell.id,
+                                from: squareNumber,
+                                to: +hoverSquare.id,
                                 piece: piece!,
-                                takenPiece: takenPiece,
+                                capturedPiece,
                             });
 
                             resetBoard();
-                            setLastMove(cellNumber, +hoverCell.id);
-                        } else if (isSameCell) {
+                            setLastMove(squareNumber, +hoverSquare.id);
+                        } else if (isSameSquare) {
                             pieceImage.current!.style.opacity = '1';
                         } else {
                             pieceImage.current!.style.opacity = '1';
@@ -233,18 +235,18 @@ export const Cell: FC<Props> = ({
     }, [onMove, piece, setLastMove, whoseMove]);
 
     const onMouseEnter = isTracking
-        ? () => setHoverCell(cellNumber)
+        ? () => setHoverSquare(squareNumber)
         : undefined;
-    const onMouseLeave = isTracking ? () => setHoverCell(-1) : undefined;
+    const onMouseLeave = isTracking ? () => setHoverSquare(-1) : undefined;
 
     useEffect(() => {
         if (!isTracking) {
-            setHoverCell(-1);
+            setHoverSquare(-1);
         }
     }, [isTracking]);
 
     useEffect(() => {
-        if (activeCell === cellNumber) {
+        if (activeSquare === squareNumber) {
             setOnPieceMove((prevState) => {
                 return (top: string, left: string) => {
                     //for castling animate
@@ -268,11 +270,11 @@ export const Cell: FC<Props> = ({
                 };
             });
         }
-    }, [activeCell, boardSide]);
+    }, [activeSquare, boardSide]);
 
     useEffect(() => {
-        if (pieceImage.current && enemyMove.to === cellNumber) {
-            //piece taken
+        if (pieceImage.current && enemyMove.to === squareNumber) {
+            //piece captured
             pieceImage.current.style.opacity = '0.5';
 
             setTimeout(() => {
@@ -280,7 +282,7 @@ export const Cell: FC<Props> = ({
             }, animationTime + afterAnimationTime - 1); // -1 so the front piece doesn't blink
         }
 
-        if (pieceImage.current && enemyMove.from === cellNumber) {
+        if (pieceImage.current && enemyMove.from === squareNumber) {
             const x = enemyMove.to % sideSize;
             const y = Math.floor(enemyMove.to / sideSize);
 
@@ -306,8 +308,8 @@ export const Cell: FC<Props> = ({
             pieceImage.current!.style.top = top;
             pieceImage.current!.style.left = left;
 
-            if (shahCell !== undefined) {
-                setShahCell(undefined);
+            if (checkSquare !== undefined) {
+                setCheckSquare(undefined);
             }
             setLastMove(enemyMove.from, enemyMove.to);
         }
@@ -315,8 +317,8 @@ export const Cell: FC<Props> = ({
 
     useEffect(() => {
         if (piece && piece.type === PieceType.king) {
-            if (chessEngine.isShah(cellNumber, piece.color)) {
-                setShahCell(cellNumber);
+            if (chessEngine.isCheck(squareNumber, piece.color)) {
+                setCheckSquare(squareNumber);
             }
         }
     }, [whoseMove]);
@@ -325,18 +327,18 @@ export const Cell: FC<Props> = ({
     if (
         piece &&
         piece.color === playerInfo.color &&
-        cellNumber !== activeCell
+        squareNumber !== activeSquare
     ) {
         onClick = selectPiece;
     } else if (isTracking) {
         onClick = () => {
             resetBoard();
-            if (shahCell !== undefined) {
-                setShahCell(undefined);
+            if (checkSquare !== undefined) {
+                setCheckSquare(undefined);
             }
 
             if (pieceImage.current) {
-                //piece taken
+                //piece captured
                 pieceImage.current.style.opacity = '0.5';
 
                 setTimeout(() => {
@@ -344,14 +346,14 @@ export const Cell: FC<Props> = ({
                 }, animationTime + afterAnimationTime - 1); // -1 so the front piece doesn't blink
             }
 
-            setLastMove(activeCell!, cellNumber);
+            setLastMove(activeSquare!, squareNumber);
             onPieceMove(top, left);
             setTimeout(() => {
                 onMove({
-                    from: activeCell!,
-                    to: cellNumber,
+                    from: activeSquare!,
+                    to: squareNumber,
                     piece: activePiece!,
-                    takenPiece: piece,
+                    capturedPiece: piece,
                 });
             }, animationTime + afterAnimationTime);
         };
@@ -361,7 +363,7 @@ export const Cell: FC<Props> = ({
 
     return (
         <div
-            id={cellNumber.toString()}
+            id={squareNumber.toString()}
             className={isTracking ? 'track' : ''}
             data-piece-type={piece?.type}
             data-piece-color={piece?.color}
@@ -396,7 +398,7 @@ export const Cell: FC<Props> = ({
                         transition: top ${animationTime}ms linear,
                             left ${animationTime}ms linear;
 
-                        ${shahCell === cellNumber
+                        ${checkSquare === squareNumber
                             ? `background: radial-gradient(
                             red 0%,
                             rgba(220, 0, 0, 128) 25%,
@@ -416,10 +418,10 @@ export const Cell: FC<Props> = ({
                     width: 100%;
                     height: 100%;
                     background-color: ${backlightColor};
-                    ${hoverCell === cellNumber
+                    ${hoverSquare === squareNumber
                         ? `background-color: ${hoverColor};`
                         : ''}
-                    ${isTracking && piece && hoverCell !== cellNumber
+                    ${isTracking && piece && hoverSquare !== squareNumber
                         ? `&:after {
                             content: "";
                             position: absolute;
@@ -460,7 +462,7 @@ export const Cell: FC<Props> = ({
                         {digit}
                     </span>
                 )}
-                {isTracking && !piece && hoverCell !== cellNumber && (
+                {isTracking && !piece && hoverSquare !== squareNumber && (
                     <div
                         css={css`
                             margin: auto;

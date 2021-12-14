@@ -2,13 +2,13 @@
 /** @jsx jsx */
 import { css, jsx } from '@emotion/react';
 import { FC } from 'react';
-import { Cell } from './Cell';
+import { Square } from './Square';
 import { useGameInfoContext } from './GameInfoContext';
 import { Piece } from '../types/Piece';
 import long from 'long';
 import { Position } from '../types/Position';
 import { MoveContext } from './MoveContext';
-import { numberOfCells, sideSize } from '../constants/constants';
+import { squaresCount, sideSize } from '../constants/constants';
 import { PieceType } from '../types/PieceType';
 import { useBoardContext } from './BoardContext';
 
@@ -20,32 +20,32 @@ interface Props {
 
 const getPieceFromPosition = (
     position: Position,
-    cellBitboard: long
+    squareBitboard: long
 ): Piece | undefined => {
-    if (!position.pawn.black.and(cellBitboard).isZero())
+    if (!position.pawn.black.and(squareBitboard).isZero())
         return { type: PieceType.pawn, color: 'black' };
-    if (!position.rook.black.and(cellBitboard).isZero())
+    if (!position.rook.black.and(squareBitboard).isZero())
         return { type: PieceType.rook, color: 'black' };
-    if (!position.bishop.black.and(cellBitboard).isZero())
+    if (!position.bishop.black.and(squareBitboard).isZero())
         return { type: PieceType.bishop, color: 'black' };
-    if (!position.knight.black.and(cellBitboard).isZero())
+    if (!position.knight.black.and(squareBitboard).isZero())
         return { type: PieceType.knight, color: 'black' };
-    if (!position.king.black.and(cellBitboard).isZero())
+    if (!position.king.black.and(squareBitboard).isZero())
         return { type: PieceType.king, color: 'black' };
-    if (!position.queen.black.and(cellBitboard).isZero())
+    if (!position.queen.black.and(squareBitboard).isZero())
         return { type: PieceType.queen, color: 'black' };
 
-    if (!position.pawn.white.and(cellBitboard).isZero())
+    if (!position.pawn.white.and(squareBitboard).isZero())
         return { type: PieceType.pawn, color: 'white' };
-    if (!position.rook.white.and(cellBitboard).isZero())
+    if (!position.rook.white.and(squareBitboard).isZero())
         return { type: PieceType.rook, color: 'white' };
-    if (!position.bishop.white.and(cellBitboard).isZero())
+    if (!position.bishop.white.and(squareBitboard).isZero())
         return { type: PieceType.bishop, color: 'white' };
-    if (!position.knight.white.and(cellBitboard).isZero())
+    if (!position.knight.white.and(squareBitboard).isZero())
         return { type: PieceType.knight, color: 'white' };
-    if (!position.king.white.and(cellBitboard).isZero())
+    if (!position.king.white.and(squareBitboard).isZero())
         return { type: PieceType.king, color: 'white' };
-    if (!position.queen.white.and(cellBitboard).isZero())
+    if (!position.queen.white.and(squareBitboard).isZero())
         return { type: PieceType.queen, color: 'white' };
 
     return undefined;
@@ -55,12 +55,12 @@ export const ChessBoard: FC<Props> = ({ position }) => {
     const { isReverse, playerInfo } = useGameInfoContext();
     const { lastMove, track } = useBoardContext();
 
-    const cells = [];
+    const squares = [];
 
     let start: number;
     let end: number;
     let increment: number;
-    let cellBitboard: long;
+    let squareBitboard: long;
 
     const boardSide =
         (playerInfo.color === 'black' && !isReverse) ||
@@ -71,24 +71,24 @@ export const ChessBoard: FC<Props> = ({ position }) => {
         end = sideSize;
         increment = 1;
 
-        cellBitboard = long.ONE.shiftLeft(numberOfCells - 1);
+        squareBitboard = long.ONE.shiftLeft(squaresCount - 1);
     } else {
         start = sideSize - 1;
         end = -1;
         increment = -1;
 
-        cellBitboard = long.ONE;
+        squareBitboard = long.ONE;
     }
 
     for (let i = start; i !== end; i += increment) {
         for (let j = start; j !== end; j += increment) {
-            const piece = getPieceFromPosition(position, cellBitboard);
+            const piece = getPieceFromPosition(position, squareBitboard);
 
-            cells.push(
-                <Cell
+            squares.push(
+                <Square
                     piece={piece}
-                    isTracking={!track.and(cellBitboard).isZero()}
-                    isLastMove={!lastMove.and(cellBitboard).isZero()}
+                    isTracking={!track.and(squareBitboard).isZero()}
+                    isLastMove={!lastMove.and(squareBitboard).isZero()}
                     key={'' + (i * sideSize + j)}
                     x={j}
                     y={i}
@@ -100,13 +100,13 @@ export const ChessBoard: FC<Props> = ({ position }) => {
                     digit={
                         end - increment === j ? (i + 1).toString() : undefined
                     }
-                ></Cell>
+                ></Square>
             );
 
             if (boardSide) {
-                cellBitboard = cellBitboard.shiftRightUnsigned(1);
+                squareBitboard = squareBitboard.shiftRightUnsigned(1);
             } else {
-                cellBitboard = cellBitboard.shiftLeft(1);
+                squareBitboard = squareBitboard.shiftLeft(1);
             }
         }
     }
@@ -122,7 +122,7 @@ export const ChessBoard: FC<Props> = ({ position }) => {
                 box-shadow: 2px 2px 6px rgba(0, 0, 0, 0.4);
             `}
         >
-            <MoveContext>{cells}</MoveContext>
+            <MoveContext>{squares}</MoveContext>
         </div>
     );
 };

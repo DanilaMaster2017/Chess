@@ -6,7 +6,7 @@ import React, {
     createContext,
     SetStateAction,
 } from 'react';
-import { numberOfCells } from '../constants/constants';
+import { squaresCount } from '../constants/constants';
 import { Move } from '../types/Move';
 import { Piece } from '../types/Piece';
 import { PieceType } from '../types/PieceType';
@@ -18,10 +18,10 @@ interface IBoardContext {
     setEnemyMove: (cm: Move) => void;
     lastMove: long;
     setLastMove: (f: number, t: number) => void;
-    shahCell: number | undefined;
-    setShahCell: (cell: number | undefined) => void;
-    activeCell: number | undefined;
-    setActiveCell: (cell: number | undefined) => void;
+    checkSquare: number | undefined;
+    setCheckSquare: (cell: number | undefined) => void;
+    activeSquare: number | undefined;
+    setActiveSquare: (cell: number | undefined) => void;
     activePiece: Piece | undefined;
     setActivePiece: (piece: Piece | undefined) => void;
     track: long;
@@ -38,15 +38,15 @@ const BoardContextProvider = createContext<IBoardContext>({
     onMove: async (m: Move) => {},
     lastMove: long.ZERO,
     enemyMove: defaultMove,
-    shahCell: undefined,
-    activeCell: undefined,
+    checkSquare: undefined,
+    activeSquare: undefined,
     activePiece: undefined,
     track: long.ZERO,
     setOnMove: (f: SetStateAction<(m: Move) => Promise<void>>) => {},
     setLastMove: () => {},
     setEnemyMove: () => {},
-    setShahCell: () => {},
-    setActiveCell: () => {},
+    setCheckSquare: () => {},
+    setActiveSquare: () => {},
     setActivePiece: () => {},
     setTrack: () => {},
 });
@@ -61,16 +61,16 @@ export const BoardContext: FC = ({ children }) => {
     });
 
     const [track, setTrack] = useState<long>(long.ZERO);
-    const [activeCell, setActiveCell] = useState<number | undefined>();
+    const [activeSquare, setActiveSquare] = useState<number | undefined>();
     const [activePiece, setActivePiece] = useState<Piece>();
     const [enemyMove, setEnemyMove] = useState<Move>(defaultMove);
-    const [shahCell, setShahCell] = useState<number | undefined>();
+    const [checkSquare, setCheckSquare] = useState<number | undefined>();
     const [lastMove, setLastMoveState] = useState<long>(long.ZERO);
 
     const setLastMove = (from: number, to: number) => {
         setLastMoveState(
-            long.ONE.shiftLeft(numberOfCells - 1 - to).or(
-                long.ONE.shiftLeft(numberOfCells - 1 - from)
+            long.ONE.shiftLeft(squaresCount - 1 - to).or(
+                long.ONE.shiftLeft(squaresCount - 1 - from)
             )
         );
     };
@@ -81,15 +81,15 @@ export const BoardContext: FC = ({ children }) => {
                 onMove,
                 lastMove,
                 enemyMove,
-                shahCell,
-                activeCell,
+                checkSquare,
+                activeSquare,
                 activePiece,
                 track,
                 setOnMove,
                 setLastMove,
                 setEnemyMove,
-                setShahCell,
-                setActiveCell,
+                setCheckSquare,
+                setActiveSquare,
                 setActivePiece,
                 setTrack,
             }}

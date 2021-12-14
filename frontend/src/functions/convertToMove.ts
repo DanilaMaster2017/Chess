@@ -2,22 +2,22 @@ import { Move } from '../types/Move';
 import { Piece } from '../types/Piece';
 
 export const convertToMove = (move: number, color: 'white' | 'black'): Move => {
-    let takenPiece: Piece | undefined;
+    let capturedPiece: Piece | undefined;
 
-    const takenPieceType = 0b111 & (move >> 15);
-    if (takenPieceType) {
-        takenPiece = {
-            type: takenPieceType,
+    const capturedPieceType = 0b111 & (move >> 15);
+    if (capturedPieceType) {
+        capturedPiece = {
+            type: capturedPieceType,
             color: color === 'white' ? 'black' : 'white',
         };
     }
 
-    let replacePiece: Piece | undefined;
+    let promotedPiece: Piece | undefined;
 
-    const replacePieceType = 0b111 & (move >> 18);
-    if (replacePieceType) {
-        replacePiece = {
-            type: replacePieceType,
+    const promotedPieceType = 0b111 & (move >> 18);
+    if (promotedPieceType) {
+        promotedPiece = {
+            type: promotedPieceType,
             color: color,
         };
     }
@@ -29,7 +29,7 @@ export const convertToMove = (move: number, color: 'white' | 'black'): Move => {
             type: 0b111 & (move >> 12),
             color: color,
         },
-        takenPiece: takenPiece,
-        replacePiece: replacePiece,
+        capturedPiece,
+        promotedPiece,
     };
 };

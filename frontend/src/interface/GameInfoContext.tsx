@@ -4,16 +4,16 @@ import { PlayerInfo } from '../types/PlayerInfo';
 interface IGameInfoContext {
     playerInfo: PlayerInfo;
     enemyInfo: PlayerInfo;
-    playerTakenPieces: Map<string, number>;
-    enemyTakenPieces: Map<string, number>;
+    playerCapturedPieces: Map<string, number>;
+    enemyCapturedPieces: Map<string, number>;
     playerTimeLeft?: Date;
     enemyTimeLeft?: Date;
     isReverse: boolean;
     whoseMove: 'player' | 'enemy' | 'gameOver';
     setPlayerInfo: (v: PlayerInfo) => void;
     setEnemyInfo: (v: PlayerInfo) => void;
-    setPlayerTakenPieces: (v: Map<string, number>) => void;
-    setEnemyTakenPieces: (v: Map<string, number>) => void;
+    setPlayerCapturedPieces: (v: Map<string, number>) => void;
+    setEnemyCapturedPieces: (v: Map<string, number>) => void;
     setPlayerTimeLeft: (v: Date) => void;
     setEnemyTimeLeft: (v: Date) => void;
     setIsReverse: (v: boolean) => void;
@@ -24,21 +24,21 @@ const defaultplayerInfo: PlayerInfo = {
     color: 'white',
     name: 'Аноним',
 };
-const defaultTakenPieces: Map<string, number> = new Map();
+const defaultCapturedPieces: Map<string, number> = new Map();
 const defaultIsReverse = false;
 const defaultWhoseMove = 'player';
 
 const GameInfoContextProvider = createContext<IGameInfoContext>({
     playerInfo: defaultplayerInfo,
     enemyInfo: defaultplayerInfo,
-    playerTakenPieces: defaultTakenPieces,
-    enemyTakenPieces: defaultTakenPieces,
+    playerCapturedPieces: defaultCapturedPieces,
+    enemyCapturedPieces: defaultCapturedPieces,
     whoseMove: defaultWhoseMove,
     isReverse: defaultIsReverse,
     setPlayerInfo: () => {},
     setEnemyInfo: () => {},
-    setPlayerTakenPieces: () => {},
-    setEnemyTakenPieces: () => {},
+    setPlayerCapturedPieces: () => {},
+    setEnemyCapturedPieces: () => {},
     setPlayerTimeLeft: () => {},
     setEnemyTimeLeft: () => {},
     setIsReverse: () => {},
@@ -52,12 +52,12 @@ export function useGameInfoContext() {
 export const GameInfoContext: FC = ({ children }) => {
     const [playerInfo, setPlayerInfo] = useState<PlayerInfo>(defaultplayerInfo);
     const [enemyInfo, setEnemyInfo] = useState<PlayerInfo>(defaultplayerInfo);
-    const [playerTakenPieces, setPlayerTakenPieces] = useState<
+    const [playerCapturedPieces, setPlayerCapturedPieces] = useState<
         Map<string, number>
-    >(defaultTakenPieces);
-    const [enemyTakenPieces, setEnemyTakenPieces] = useState<
+    >(defaultCapturedPieces);
+    const [enemyCapturedPieces, setEnemyCapturedPieces] = useState<
         Map<string, number>
-    >(defaultTakenPieces);
+    >(defaultCapturedPieces);
     const [playerTimeLeft, setPlayerTimeLeft] = useState<Date | undefined>();
     const [enemyTimeLeft, setEnemyTimeLeft] = useState<Date | undefined>();
     const [isReverse, setIsReverse] = useState<boolean>(defaultIsReverse);
@@ -70,16 +70,16 @@ export const GameInfoContext: FC = ({ children }) => {
             value={{
                 playerInfo,
                 enemyInfo,
-                playerTakenPieces,
-                enemyTakenPieces,
+                playerCapturedPieces,
+                enemyCapturedPieces,
                 playerTimeLeft,
                 enemyTimeLeft,
                 isReverse,
                 whoseMove,
                 setPlayerInfo,
                 setEnemyInfo,
-                setPlayerTakenPieces,
-                setEnemyTakenPieces,
+                setPlayerCapturedPieces,
+                setEnemyCapturedPieces,
                 setPlayerTimeLeft,
                 setEnemyTimeLeft,
                 setIsReverse,

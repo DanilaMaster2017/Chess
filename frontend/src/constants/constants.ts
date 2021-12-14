@@ -1,7 +1,7 @@
 export const afterAnimationTime = 50; //needed to finish the animation before transferring the move
 export const animationTime = 300;
 export const sideSize = 8;
-export const numberOfCells = sideSize * sideSize;
+export const squaresCount = sideSize * sideSize;
 export const playMan = 'Создать игру';
 export const playFriend = 'Сыграть c другом';
 export const playComputer = 'Сыграть с компьютером';

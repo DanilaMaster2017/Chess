@@ -12,8 +12,8 @@ interface IMoveContext {
     setOnPieceMove: (f: (top: string, left: string) => void) => void;
     castlingRooks: Players;
     setCastlingRooks: (castlingRook: SetStateAction<Players>) => void;
-    hoverCell: number;
-    setHoverCell: (h: number) => void;
+    hoverSquare: number;
+    setHoverSquare: (h: number) => void;
 }
 
 const defaultCastlingRooks = {
@@ -28,8 +28,8 @@ const MoveContextProvider = createContext<IMoveContext>({
     setCastlingRooks: () => {
         return defaultCastlingRooks;
     },
-    hoverCell: -1,
-    setHoverCell: (n: number) => {},
+    hoverSquare: -1,
+    setHoverSquare: (n: number) => {},
 });
 
 export function useMoveContext() {
@@ -47,7 +47,7 @@ export const MoveContext: FC = ({ children }) => {
         defaultCastlingRooks
     );
 
-    const [hoverCell, setHoverCell] = useState<number>(-1);
+    const [hoverSquare, setHoverSquare] = useState<number>(-1);
 
     return (
         <MoveContextProvider.Provider
@@ -56,8 +56,8 @@ export const MoveContext: FC = ({ children }) => {
                 setOnPieceMove,
                 castlingRooks,
                 setCastlingRooks,
-                hoverCell,
-                setHoverCell,
+                hoverSquare,
+                setHoverSquare,
             }}
         >
             {children}

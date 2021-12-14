@@ -5,7 +5,7 @@ import { FC } from 'react';
 import { useGameInfoContext } from './GameInfoContext';
 import { UserInfo } from './UserInfo';
 import { Timer } from './Timer';
-import { TakenPieces } from './TakenPieces';
+import { CapturedPieces } from './CapturedPieces';
 
 interface Props {
     person: 'player' | 'enemy';
@@ -13,14 +13,14 @@ interface Props {
 
 export const GameInfo: FC<Props> = ({ person }) => {
     let personInfo;
-    let takenPieces;
+    let capturedPieces;
     let timeLeft;
 
     const {
         playerInfo,
         enemyInfo,
-        playerTakenPieces,
-        enemyTakenPieces,
+        playerCapturedPieces,
+        enemyCapturedPieces,
         playerTimeLeft,
         enemyTimeLeft,
         whoseMove,
@@ -28,11 +28,11 @@ export const GameInfo: FC<Props> = ({ person }) => {
 
     if (person === 'player') {
         personInfo = playerInfo;
-        takenPieces = playerTakenPieces;
+        capturedPieces = playerCapturedPieces;
         timeLeft = playerTimeLeft;
     } else {
         personInfo = enemyInfo;
-        takenPieces = enemyTakenPieces;
+        capturedPieces = enemyCapturedPieces;
         timeLeft = enemyTimeLeft;
     }
 
@@ -48,8 +48,10 @@ export const GameInfo: FC<Props> = ({ person }) => {
             `}
         >
             <UserInfo {...personInfo}></UserInfo>
-            {!!takenPieces.size && (
-                <TakenPieces takenPieces={takenPieces}></TakenPieces>
+            {!!capturedPieces.size && (
+                <CapturedPieces
+                    capturedPieces={capturedPieces}
+                ></CapturedPieces>
             )}
             {timeLeft && <Timer timeLeft={timeLeft}></Timer>}
         </div>
