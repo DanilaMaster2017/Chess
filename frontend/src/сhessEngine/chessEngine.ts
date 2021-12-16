@@ -56,14 +56,14 @@ enum GameOverReason {
     threeFoldRepetitionRule,
 }
 
-enum DirectionOfAttack {
+enum DirectionOfAttacks {
     horizontal = 1,
     vertical,
     diagonalH1A8,
     diagonalA1H8,
 }
 
-enum RayOfAttack {
+enum RayOfAttacks {
     plus7 = 7,
     plus1 = 1,
     plus9 = 9,
@@ -716,80 +716,83 @@ class ChessEngine implements IChessEngine {
             for (let j = 0; j < sideSize; j++) {
                 const piecePosition: number = i * sideSize + j;
 
-                let minus1Attack: long = long.ZERO;
+                let minus1Attacks: long = long.ZERO;
                 for (let k = 0; k < j; k++) {
-                    minus1Attack = minus1Attack.or(
+                    minus1Attacks = minus1Attacks.or(
                         this.setMask[piecePosition - k - 1]
                     );
                 }
-                this.rays.minus1.push(minus1Attack);
+                this.rays.minus1.push(minus1Attacks);
 
-                let minus7Attack: long = long.ZERO;
+                let minus7Attacks: long = long.ZERO;
                 for (let k = 0; k < i && k < sideSize - 1 - j; k++) {
-                    minus7Attack = minus7Attack.or(
+                    minus7Attacks = minus7Attacks.or(
                         this.setMask[piecePosition - (k + 1) * (sideSize - 1)]
                     );
                 }
-                this.rays.minus7.push(minus7Attack);
+                this.rays.minus7.push(minus7Attacks);
 
-                let minus8Attack: long = long.ZERO;
+                let minus8Attacks: long = long.ZERO;
                 for (let k = 0; k < i; k++) {
-                    minus8Attack = minus8Attack.or(
+                    minus8Attacks = minus8Attacks.or(
                         this.setMask[piecePosition - (k + 1) * sideSize]
                     );
                 }
-                this.rays.minus8.push(minus8Attack);
+                this.rays.minus8.push(minus8Attacks);
 
-                let minus9Attack: long = long.ZERO;
+                let minus9Attacks: long = long.ZERO;
                 for (let k = 0; k < i && k < j; k++) {
-                    minus9Attack = minus9Attack.or(
+                    minus9Attacks = minus9Attacks.or(
                         this.setMask[piecePosition - (k + 1) * (sideSize + 1)]
                     );
                 }
-                this.rays.minus9.push(minus9Attack);
+                this.rays.minus9.push(minus9Attacks);
 
-                let plus1Attack: long = long.ZERO;
+                let plus1Attacks: long = long.ZERO;
                 for (let k = 0; k < sideSize - 1 - j; k++) {
-                    plus1Attack = plus1Attack.or(
+                    plus1Attacks = plus1Attacks.or(
                         this.setMask[piecePosition + k + 1]
                     );
                 }
-                this.rays.plus1.push(plus1Attack);
+                this.rays.plus1.push(plus1Attacks);
 
-                let plus7Attack: long = long.ZERO;
+                let plus7Attacks: long = long.ZERO;
                 for (let k = 0; k < sideSize - 1 - i && k < j; k++) {
-                    plus7Attack = plus7Attack.or(
+                    plus7Attacks = plus7Attacks.or(
                         this.setMask[piecePosition + (k + 1) * (sideSize - 1)]
                     );
                 }
-                this.rays.plus7.push(plus7Attack);
+                this.rays.plus7.push(plus7Attacks);
 
-                let plus8Attack: long = long.ZERO;
+                let plus8Attacks: long = long.ZERO;
                 for (let k = 0; k < sideSize - 1 - i; k++) {
-                    plus8Attack = plus8Attack.or(
+                    plus8Attacks = plus8Attacks.or(
                         this.setMask[piecePosition + (k + 1) * sideSize]
                     );
                 }
-                this.rays.plus8.push(plus8Attack);
+                this.rays.plus8.push(plus8Attacks);
 
-                let plus9Attack: long = long.ZERO;
+                let plus9Attacks: long = long.ZERO;
                 for (
                     let k = 0;
                     k < sideSize - 1 - i && k < sideSize - 1 - j;
                     k++
                 ) {
-                    plus9Attack = plus9Attack.or(
+                    plus9Attacks = plus9Attacks.or(
                         this.setMask[piecePosition + (k + 1) * (sideSize + 1)]
                     );
                 }
-                this.rays.plus9.push(plus9Attack);
+                this.rays.plus9.push(plus9Attacks);
             }
         }
 
         this.сalculateAttacksTo(this.node);
     }
 
-    private getVerticalAttack(from: number, positionRotatedLeft90: long): long {
+    private getVerticalAttacks(
+        from: number,
+        positionRotatedLeft90: long
+    ): long {
         const line = maxSixBitValue;
         const file = from % sideSize;
 
@@ -801,7 +804,7 @@ class ChessEngine implements IChessEngine {
         return this.verticalAttacks[from][verticalLine];
     }
 
-    private getHorizontalAttack(from: number, position: Position): long {
+    private getHorizontalAttacks(from: number, position: Position): long {
         const line = maxSixBitValue;
         const rank: number = Math.floor(from / sideSize);
 
@@ -813,7 +816,7 @@ class ChessEngine implements IChessEngine {
         return this.horizontalAttacks[from][horizontalLine];
     }
 
-    private getDiagonalA1H8Attack(
+    private getDiagonalA1H8Attacks(
         from: number,
         positionRotatedLeft45: long
     ): long {
@@ -912,39 +915,39 @@ class ChessEngine implements IChessEngine {
             enemyPosition = enemyPosition.or(this.setMask[node.enPassant]);
         }
 
-        const pawnAttack = (this.pawnsMoves[color] as PawnsMoves).attacks[
+        const pawnAttacks = (this.pawnsMoves[color] as PawnsMoves).attacks[
             from
         ].and(enemyPosition);
 
-        const directionOfAttack = this.isLocked(
+        const directionOfAttacks = this.isLocked(
             from,
             color,
             notSelfPieces,
             node
         );
 
-        switch (directionOfAttack) {
-            case DirectionOfAttack.horizontal:
+        switch (directionOfAttacks) {
+            case DirectionOfAttacks.horizontal:
                 return long.ZERO;
-            case DirectionOfAttack.vertical:
+            case DirectionOfAttacks.vertical:
                 return pawnMove;
 
-            case DirectionOfAttack.diagonalH1A8:
-                return pawnAttack.and(
+            case DirectionOfAttacks.diagonalH1A8:
+                return pawnAttacks.and(
                     this.setMask[from + sign * (sideSize - 1)].not()
                 );
 
-            case DirectionOfAttack.diagonalA1H8:
-                return pawnAttack.and(
+            case DirectionOfAttacks.diagonalA1H8:
+                return pawnAttacks.and(
                     this.setMask[from + sign * (sideSize + 1)].not()
                 );
         }
 
         if (!node.check.isZero()) {
-            return pawnMove.or(pawnAttack).and(node.check);
+            return pawnMove.or(pawnAttacks).and(node.check);
         }
 
-        return pawnMove.or(pawnAttack);
+        return pawnMove.or(pawnAttacks);
     }
 
     private getKnightAttacks(
@@ -978,41 +981,41 @@ class ChessEngine implements IChessEngine {
             color
         ).not();
 
-        const horizontalAttack = this.getHorizontalAttack(
+        const horizontalAttacks = this.getHorizontalAttacks(
             from,
             node.position.origin
         );
-        const verticalAttack = this.getVerticalAttack(
+        const verticalAttacks = this.getVerticalAttacks(
             from,
             node.position.rotatedLeft90
         );
 
-        const directionOfAttack = this.isLocked(
+        const directionOfAttacks = this.isLocked(
             from,
             color,
             notSelfPieces,
             node,
-            horizontalAttack,
-            verticalAttack
+            horizontalAttacks,
+            verticalAttacks
         );
 
-        switch (directionOfAttack) {
-            case DirectionOfAttack.horizontal:
-                return horizontalAttack.and(notSelfPieces);
-            case DirectionOfAttack.vertical:
-                return verticalAttack.and(notSelfPieces);
-            case DirectionOfAttack.diagonalH1A8:
-            case DirectionOfAttack.diagonalA1H8:
+        switch (directionOfAttacks) {
+            case DirectionOfAttacks.horizontal:
+                return horizontalAttacks.and(notSelfPieces);
+            case DirectionOfAttacks.vertical:
+                return verticalAttacks.and(notSelfPieces);
+            case DirectionOfAttacks.diagonalH1A8:
+            case DirectionOfAttacks.diagonalA1H8:
                 return long.ZERO;
         }
 
-        const rookAttack = horizontalAttack.or(verticalAttack);
+        const rookAttacks = horizontalAttacks.or(verticalAttacks);
 
         if (!node.check.isZero()) {
-            return rookAttack.and(node.check);
+            return rookAttacks.and(node.check);
         }
 
-        return rookAttack.and(notSelfPieces);
+        return rookAttacks.and(notSelfPieces);
     }
 
     private getBishopAttacks(
@@ -1025,16 +1028,16 @@ class ChessEngine implements IChessEngine {
             color
         ).not();
 
-        const a1H8Attacks = this.getDiagonalA1H8Attack(
+        const a1H8Attacks = this.getDiagonalA1H8Attacks(
             from,
             node.position.rotatedLeft45
         );
-        const h1A8Attack = this.getDiagonalH1A8Attacks(
+        const h1A8Attacks = this.getDiagonalH1A8Attacks(
             from,
             node.position.rotatedRight45
         );
 
-        const directionOfAttack = this.isLocked(
+        const directionOfAttacks = this.isLocked(
             from,
             color,
             notSelfPieces,
@@ -1042,26 +1045,26 @@ class ChessEngine implements IChessEngine {
             undefined,
             undefined,
             a1H8Attacks,
-            h1A8Attack
+            h1A8Attacks
         );
 
-        switch (directionOfAttack) {
-            case DirectionOfAttack.diagonalA1H8:
+        switch (directionOfAttacks) {
+            case DirectionOfAttacks.diagonalA1H8:
                 return a1H8Attacks.and(notSelfPieces);
-            case DirectionOfAttack.diagonalH1A8:
-                return h1A8Attack.and(notSelfPieces);
-            case DirectionOfAttack.horizontal:
-            case DirectionOfAttack.vertical:
+            case DirectionOfAttacks.diagonalH1A8:
+                return h1A8Attacks.and(notSelfPieces);
+            case DirectionOfAttacks.horizontal:
+            case DirectionOfAttacks.vertical:
                 return long.ZERO;
         }
 
-        const bishopAttack = a1H8Attacks.or(h1A8Attack);
+        const bishopAttacks = a1H8Attacks.or(h1A8Attacks);
 
         if (!node.check.isZero()) {
-            return bishopAttack.and(node.check);
+            return bishopAttacks.and(node.check);
         }
 
-        return bishopAttack.and(notSelfPieces);
+        return bishopAttacks.and(notSelfPieces);
     }
 
     private getQueenAttacks(
@@ -1074,55 +1077,55 @@ class ChessEngine implements IChessEngine {
             color
         ).not();
 
-        const horizontalAttack = this.getHorizontalAttack(
+        const horizontalAttacks = this.getHorizontalAttacks(
             from,
             node.position.origin
         );
-        const verticalAttack = this.getVerticalAttack(
+        const verticalAttacks = this.getVerticalAttacks(
             from,
             node.position.rotatedLeft90
         );
-        const a1H8Attack = this.getDiagonalA1H8Attack(
+        const a1H8Attacks = this.getDiagonalA1H8Attacks(
             from,
             node.position.rotatedLeft45
         );
-        const h1A8Attack = this.getDiagonalH1A8Attacks(
+        const h1A8Attacks = this.getDiagonalH1A8Attacks(
             from,
             node.position.rotatedRight45
         );
 
-        const directionOfAttack = this.isLocked(
+        const directionOfAttacks = this.isLocked(
             from,
             color,
             notSelfPieces,
             node,
-            horizontalAttack,
-            verticalAttack,
-            a1H8Attack,
-            h1A8Attack
+            horizontalAttacks,
+            verticalAttacks,
+            a1H8Attacks,
+            h1A8Attacks
         );
 
-        switch (directionOfAttack) {
-            case DirectionOfAttack.horizontal:
-                return horizontalAttack.and(notSelfPieces);
-            case DirectionOfAttack.vertical:
-                return verticalAttack.and(notSelfPieces);
-            case DirectionOfAttack.diagonalA1H8:
-                return a1H8Attack.and(notSelfPieces);
-            case DirectionOfAttack.diagonalH1A8:
-                return h1A8Attack.and(notSelfPieces);
+        switch (directionOfAttacks) {
+            case DirectionOfAttacks.horizontal:
+                return horizontalAttacks.and(notSelfPieces);
+            case DirectionOfAttacks.vertical:
+                return verticalAttacks.and(notSelfPieces);
+            case DirectionOfAttacks.diagonalA1H8:
+                return a1H8Attacks.and(notSelfPieces);
+            case DirectionOfAttacks.diagonalH1A8:
+                return h1A8Attacks.and(notSelfPieces);
         }
 
-        const queenAttack = horizontalAttack
-            .or(verticalAttack)
-            .or(a1H8Attack)
-            .or(h1A8Attack);
+        const queenAttacks = horizontalAttacks
+            .or(verticalAttacks)
+            .or(a1H8Attacks)
+            .or(h1A8Attacks);
 
         if (!node.check.isZero()) {
-            return queenAttack.and(node.check);
+            return queenAttacks.and(node.check);
         }
 
-        return queenAttack.and(notSelfPieces);
+        return queenAttacks.and(notSelfPieces);
     }
 
     private getKingAttacks(
@@ -1190,11 +1193,11 @@ class ChessEngine implements IChessEngine {
         color: 'white' | 'black',
         notSelfPieces: long,
         node: Node,
-        horizontalAttack?: long,
-        verticalAttack?: long,
+        horizontalAttacks?: long,
+        verticalAttacks?: long,
         a1H8Attacks?: long,
-        h1A8Attack?: long
-    ): DirectionOfAttack | null {
+        h1A8Attacks?: long
+    ): DirectionOfAttacks | null {
         const enemiesAttacking = node.attacksTo[from].and(notSelfPieces);
 
         if (!enemiesAttacking.isZero()) {
@@ -1209,28 +1212,28 @@ class ChessEngine implements IChessEngine {
             );
 
             if (!bishopsAttackingPiece.isZero()) {
-                let bishopAttackFromCurrent =
+                let bishopAttacksFromCurrent =
                     a1H8Attacks ??
-                    this.getDiagonalA1H8Attack(
+                    this.getDiagonalA1H8Attacks(
                         from,
                         node.position.rotatedLeft45
                     );
 
                 if (
                     this.getOneCount(
-                        bishopAttackFromCurrent.and(bishopsAttackingPiece)
+                        bishopAttacksFromCurrent.and(bishopsAttackingPiece)
                     ) === 1
                 ) {
                     if (
-                        !bishopAttackFromCurrent
+                        !bishopAttacksFromCurrent
                             .and(node.position.origin.king[color])
                             .isZero()
                     )
-                        return DirectionOfAttack.diagonalA1H8;
+                        return DirectionOfAttacks.diagonalA1H8;
                 }
 
-                bishopAttackFromCurrent =
-                    h1A8Attack ??
+                bishopAttacksFromCurrent =
+                    h1A8Attacks ??
                     this.getDiagonalH1A8Attacks(
                         from,
                         node.position.rotatedRight45
@@ -1238,15 +1241,15 @@ class ChessEngine implements IChessEngine {
 
                 if (
                     this.getOneCount(
-                        bishopAttackFromCurrent.and(bishopsAttackingPiece)
+                        bishopAttacksFromCurrent.and(bishopsAttackingPiece)
                     ) === 1
                 ) {
                     if (
-                        !bishopAttackFromCurrent
+                        !bishopAttacksFromCurrent
                             .and(node.position.origin.king[color])
                             .isZero()
                     )
-                        return DirectionOfAttack.diagonalH1A8;
+                        return DirectionOfAttacks.diagonalH1A8;
                 }
             }
 
@@ -1259,38 +1262,38 @@ class ChessEngine implements IChessEngine {
             );
 
             if (!rooksAttackingPiece.isZero()) {
-                let rookAttackFromCurrent =
-                    horizontalAttack ??
-                    this.getHorizontalAttack(from, node.position.origin);
+                let rookAttacksFromCurrent =
+                    horizontalAttacks ??
+                    this.getHorizontalAttacks(from, node.position.origin);
 
                 if (
                     this.getOneCount(
-                        rookAttackFromCurrent.and(rooksAttackingPiece)
+                        rookAttacksFromCurrent.and(rooksAttackingPiece)
                     ) === 1
                 ) {
                     if (
-                        !rookAttackFromCurrent
+                        !rookAttacksFromCurrent
                             .and(node.position.origin.king[color])
                             .isZero()
                     )
-                        return DirectionOfAttack.horizontal;
+                        return DirectionOfAttacks.horizontal;
                 }
 
-                rookAttackFromCurrent =
-                    verticalAttack ??
-                    this.getVerticalAttack(from, node.position.rotatedLeft90);
+                rookAttacksFromCurrent =
+                    verticalAttacks ??
+                    this.getVerticalAttacks(from, node.position.rotatedLeft90);
 
                 if (
                     this.getOneCount(
-                        rookAttackFromCurrent.and(rooksAttackingPiece)
+                        rookAttacksFromCurrent.and(rooksAttackingPiece)
                     ) === 1
                 ) {
                     if (
-                        !rookAttackFromCurrent
+                        !rookAttacksFromCurrent
                             .and(node.position.origin.king[color])
                             .isZero()
                     )
-                        return DirectionOfAttack.vertical;
+                        return DirectionOfAttacks.vertical;
                 }
             }
         }
@@ -1519,13 +1522,13 @@ class ChessEngine implements IChessEngine {
                 const attacksToKingIndex =
                     squaresCount - attacksToKing.getNumBitsAbs();
 
-                const counterRay: RayOfAttack = -RayOfAttack[
-                    key as keyof typeof RayOfAttack
+                const counterRay: RayOfAttacks = -RayOfAttacks[
+                    key as keyof typeof RayOfAttacks
                 ];
 
                 return kingRay
                     .and(
-                        this.rays[RayOfAttack[counterRay] as keyof Rays][
+                        this.rays[RayOfAttacks[counterRay] as keyof Rays][
                             attacksToKingIndex
                         ]
                     )
@@ -1733,9 +1736,9 @@ class ChessEngine implements IChessEngine {
                     )
                 )
                 .or(
-                    this.getHorizontalAttack(i, node.position.origin)
+                    this.getHorizontalAttacks(i, node.position.origin)
                         .or(
-                            this.getVerticalAttack(
+                            this.getVerticalAttacks(
                                 i,
                                 node.position.rotatedLeft90
                             )
@@ -1748,7 +1751,7 @@ class ChessEngine implements IChessEngine {
                         )
                 )
                 .or(
-                    this.getDiagonalA1H8Attack(i, node.position.rotatedLeft45)
+                    this.getDiagonalA1H8Attacks(i, node.position.rotatedLeft45)
                         .or(
                             this.getDiagonalH1A8Attacks(
                                 i,
