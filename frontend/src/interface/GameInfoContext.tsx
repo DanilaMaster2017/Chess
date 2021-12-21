@@ -9,7 +9,7 @@ interface IGameInfoContext {
     playerTimeLeft?: Date;
     enemyTimeLeft?: Date;
     isReverse: boolean;
-    whoseMove: 'player' | 'enemy' | 'gameOver';
+    whoseMove: 'player' | 'enemy' | 'nobodys';
     setPlayerInfo: (v: PlayerInfo) => void;
     setEnemyInfo: (v: PlayerInfo) => void;
     setPlayerCapturedPieces: (v: Map<string, number>) => void;
@@ -17,7 +17,7 @@ interface IGameInfoContext {
     setPlayerTimeLeft: (v: Date) => void;
     setEnemyTimeLeft: (v: Date) => void;
     setIsReverse: (v: boolean) => void;
-    setWhoseMove: (v: 'player' | 'enemy' | 'gameOver') => void;
+    setWhoseMove: (v: 'player' | 'enemy' | 'nobodys') => void;
 }
 
 const defaultplayerInfo: PlayerInfo = {
@@ -61,7 +61,7 @@ export const GameInfoContext: FC = ({ children }) => {
     const [playerTimeLeft, setPlayerTimeLeft] = useState<Date | undefined>();
     const [enemyTimeLeft, setEnemyTimeLeft] = useState<Date | undefined>();
     const [isReverse, setIsReverse] = useState<boolean>(defaultIsReverse);
-    const [whoseMove, setWhoseMove] = useState<'player' | 'enemy' | 'gameOver'>(
+    const [whoseMove, setWhoseMove] = useState<'player' | 'enemy' | 'nobodys'>(
         defaultWhoseMove
     );
 

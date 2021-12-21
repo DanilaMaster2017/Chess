@@ -11,6 +11,7 @@ import { MoveContext } from './MoveContext';
 import { squaresCount, sideSize } from '../constants/constants';
 import { PieceType } from '../types/PieceType';
 import { useBoardContext } from './BoardContext';
+import { PromotePiecePanel } from './PromotePiecePanel';
 
 const letters = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
 
@@ -53,7 +54,7 @@ const getPieceFromPosition = (
 
 export const ChessBoard: FC<Props> = ({ position }) => {
     const { isReverse, playerInfo } = useGameInfoContext();
-    const { lastMove, track } = useBoardContext();
+    const { lastMove, track, fileWherePromotion } = useBoardContext();
 
     const squares = [];
 
@@ -122,6 +123,11 @@ export const ChessBoard: FC<Props> = ({ position }) => {
                 box-shadow: 2px 2px 6px rgba(0, 0, 0, 0.4);
             `}
         >
+            {fileWherePromotion !== undefined && (
+                <PromotePiecePanel
+                    file={fileWherePromotion}
+                ></PromotePiecePanel>
+            )}
             <MoveContext>{squares}</MoveContext>
         </div>
     );

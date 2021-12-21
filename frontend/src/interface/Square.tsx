@@ -38,7 +38,12 @@ export const Square: FC<Props> = ({
 }) => {
     const pieceImage = useRef<HTMLImageElement | null>(null);
 
-    const { playerInfo, isReverse, whoseMove } = useGameInfoContext();
+    const {
+        playerInfo,
+        isReverse,
+        whoseMove,
+        setWhoseMove,
+    } = useGameInfoContext();
 
     const {
         onMove,
@@ -51,6 +56,9 @@ export const Square: FC<Props> = ({
         activePiece,
         setActivePiece,
         setTrack,
+        setOnPromote,
+        fileWherePromotion,
+        setFileWherePromotion,
     } = useBoardContext();
 
     const {
@@ -206,15 +214,37 @@ export const Square: FC<Props> = ({
                                 };
                             }
 
-                            onMove({
-                                from: squareNumber,
-                                to: +hoverSquare.id,
-                                piece: piece!,
-                                capturedPiece,
-                            });
+                            const to: number = +hoverSquare.id;
+
+                            if (
+                                piece!.type === PieceType.pawn &&
+                                (to < 8 || to > 55)
+                            ) {
+                                setOnPromote(() => {
+                                    return (promotedPiece: Piece) => {
+                                        onMove({
+                                            from: squareNumber,
+                                            to,
+                                            piece: piece!,
+                                            capturedPiece,
+                                            promotedPiece,
+                                        });
+                                    };
+                                });
+
+                                setWhoseMove('nobodys');
+                                setFileWherePromotion(to % sideSize);
+                            } else {
+                                onMove({
+                                    from: squareNumber,
+                                    to,
+                                    piece: piece!,
+                                    capturedPiece,
+                                });
+                            }
 
                             resetBoard();
-                            setLastMove(squareNumber, +hoverSquare.id);
+                            setLastMove(squareNumber, to);
                         } else if (isSameSquare) {
                             pieceImage.current!.style.opacity = '1';
                         } else {
@@ -348,13 +378,34 @@ export const Square: FC<Props> = ({
 
             setLastMove(activeSquare!, squareNumber);
             onPieceMove(top, left);
+
             setTimeout(() => {
-                onMove({
-                    from: activeSquare!,
-                    to: squareNumber,
-                    piece: activePiece!,
-                    capturedPiece: piece,
-                });
+                if (
+                    activePiece!.type === PieceType.pawn &&
+                    (squareNumber < 8 || squareNumber > 55)
+                ) {
+                    setOnPromote(() => {
+                        return (promotedPiece: Piece) => {
+                            onMove({
+                                from: activeSquare!,
+                                to: squareNumber,
+                                piece: activePiece!,
+                                capturedPiece: piece,
+                                promotedPiece,
+                            });
+                        };
+                    });
+
+                    setWhoseMove('nobodys');
+                    setFileWherePromotion(squareNumber % sideSize);
+                } else {
+                    onMove({
+                        from: activeSquare!,
+                        to: squareNumber,
+                        piece: activePiece!,
+                        capturedPiece: piece,
+                    });
+                }
             }, animationTime + afterAnimationTime);
         };
     } else {
@@ -375,6 +426,7 @@ export const Square: FC<Props> = ({
                 font-size: 11px;
                 width: ${boardOneEighth}%;
                 background-color: ${backgroundColor};
+                opacity: ${fileWherePromotion !== undefined ? 0.5 : 1};
                 overflow: hidden;
                 &::before {
                     content: '';

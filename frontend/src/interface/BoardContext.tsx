@@ -14,8 +14,10 @@ import { PieceType } from '../types/PieceType';
 interface IBoardContext {
     onMove: (m: Move) => Promise<void>;
     setOnMove: (f: SetStateAction<(m: Move) => Promise<void>>) => void;
+    onPromote: (p: Piece) => void;
+    setOnPromote: (f: SetStateAction<(p: Piece) => void>) => void;
     enemyMove: Move;
-    setEnemyMove: (cm: Move) => void;
+    setEnemyMove: (m: Move) => void;
     lastMove: long;
     setLastMove: (f: number, t: number) => void;
     checkSquare: number | undefined;
@@ -26,6 +28,8 @@ interface IBoardContext {
     setActivePiece: (piece: Piece | undefined) => void;
     track: long;
     setTrack: (track: long) => void;
+    fileWherePromotion: number | undefined;
+    setFileWherePromotion: (file: number | undefined) => void;
 }
 
 const defaultMove: Move = {
@@ -36,19 +40,23 @@ const defaultMove: Move = {
 
 const BoardContextProvider = createContext<IBoardContext>({
     onMove: async (m: Move) => {},
+    onPromote: (p: Piece) => {},
     lastMove: long.ZERO,
     enemyMove: defaultMove,
     checkSquare: undefined,
     activeSquare: undefined,
     activePiece: undefined,
     track: long.ZERO,
+    fileWherePromotion: undefined,
     setOnMove: (f: SetStateAction<(m: Move) => Promise<void>>) => {},
+    setOnPromote: (f: SetStateAction<(p: Piece) => void>) => {},
     setLastMove: () => {},
     setEnemyMove: () => {},
     setCheckSquare: () => {},
     setActiveSquare: () => {},
     setActivePiece: () => {},
     setTrack: () => {},
+    setFileWherePromotion: () => {},
 });
 
 export function useBoardContext() {
@@ -59,13 +67,17 @@ export const BoardContext: FC = ({ children }) => {
     const [onMove, setOnMove] = useState<(m: Move) => Promise<void>>(() => {
         return async (m: Move) => {};
     });
+    const [onPromote, setOnPromote] = useState<(p: Piece) => void>(() => {
+        return (p: Piece) => {};
+    });
 
     const [track, setTrack] = useState<long>(long.ZERO);
-    const [activeSquare, setActiveSquare] = useState<number | undefined>();
+    const [activeSquare, setActiveSquare] = useState<number>();
     const [activePiece, setActivePiece] = useState<Piece>();
     const [enemyMove, setEnemyMove] = useState<Move>(defaultMove);
-    const [checkSquare, setCheckSquare] = useState<number | undefined>();
+    const [checkSquare, setCheckSquare] = useState<number>();
     const [lastMove, setLastMoveState] = useState<long>(long.ZERO);
+    const [fileWherePromotion, setFileWherePromotion] = useState<number>();
 
     const setLastMove = (from: number, to: number) => {
         setLastMoveState(
@@ -79,19 +91,23 @@ export const BoardContext: FC = ({ children }) => {
         <BoardContextProvider.Provider
             value={{
                 onMove,
+                onPromote,
                 lastMove,
                 enemyMove,
                 checkSquare,
                 activeSquare,
                 activePiece,
                 track,
+                fileWherePromotion,
                 setOnMove,
+                setOnPromote,
                 setLastMove,
                 setEnemyMove,
                 setCheckSquare,
                 setActiveSquare,
                 setActivePiece,
                 setTrack,
+                setFileWherePromotion,
             }}
         >
             {children}

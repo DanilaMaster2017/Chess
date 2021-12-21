@@ -97,7 +97,7 @@ export const ComputerGamePage: FC = () => {
 
                 if (gameOverReason) {
                     console.log(gameOverReason);
-                    setWhoseMove('gameOver');
+                    setWhoseMove('nobodys');
                 } else {
                     setWhoseMove('enemy');
                 }
@@ -136,7 +136,7 @@ export const ComputerGamePage: FC = () => {
 
                     if (gameOverReason) {
                         console.log(gameOverReason);
-                        setWhoseMove('gameOver');
+                        setWhoseMove('nobodys');
                     } else {
                         setWhoseMove('player');
                     }
