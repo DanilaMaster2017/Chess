@@ -24,8 +24,8 @@ interface Node {
     position: AllPosition;
     score: number;
     attacksTo: long[];
-    check: long;
-    isCastlingPossible: Players;
+    checkRay: long;
+    checkRayDirection: RayOfAttacks | undefined;
     enPassant: number | undefined;
 }
 
@@ -261,7 +261,8 @@ class ChessEngine implements IChessEngine {
             },
             score: 0,
             enPassant: undefined,
-            check: long.UZERO,
+            checkRay: long.UZERO,
+            checkRayDirection: undefined,
             attacksTo: [],
             isCastlingPossible: {
                 white: true,
@@ -932,8 +933,8 @@ class ChessEngine implements IChessEngine {
                 );
         }
 
-        if (!node.check.isZero()) {
-            return pawnMove.or(pawnAttacks).and(node.check);
+        if (!node.checkRay.isZero()) {
+            return pawnMove.or(pawnAttacks).and(node.checkRay);
         }
 
         return pawnMove.or(pawnAttacks);
@@ -953,8 +954,8 @@ class ChessEngine implements IChessEngine {
             return long.ZERO;
         }
 
-        if (!node.check.isZero()) {
-            return this.knightsAttacks[from].and(node.check);
+        if (!node.checkRay.isZero()) {
+            return this.knightsAttacks[from].and(node.checkRay);
         }
 
         return this.knightsAttacks[from].and(notSelfPieces);
@@ -1000,8 +1001,8 @@ class ChessEngine implements IChessEngine {
 
         const rookAttacks = horizontalAttacks.or(verticalAttacks);
 
-        if (!node.check.isZero()) {
-            return rookAttacks.and(node.check);
+        if (!node.checkRay.isZero()) {
+            return rookAttacks.and(node.checkRay);
         }
 
         return rookAttacks.and(notSelfPieces);
@@ -1049,8 +1050,8 @@ class ChessEngine implements IChessEngine {
 
         const bishopAttacks = a1H8Attacks.or(h1A8Attacks);
 
-        if (!node.check.isZero()) {
-            return bishopAttacks.and(node.check);
+        if (!node.checkRay.isZero()) {
+            return bishopAttacks.and(node.checkRay);
         }
 
         return bishopAttacks.and(notSelfPieces);
@@ -1110,8 +1111,8 @@ class ChessEngine implements IChessEngine {
             .or(a1H8Attacks)
             .or(h1A8Attacks);
 
-        if (!node.check.isZero()) {
-            return queenAttacks.and(node.check);
+        if (!node.checkRay.isZero()) {
+            return queenAttacks.and(node.checkRay);
         }
 
         return queenAttacks.and(notSelfPieces);
@@ -1152,7 +1153,14 @@ class ChessEngine implements IChessEngine {
             }
         }
 
-        if (node.isCastlingPossible[color]) {
+        if (node.checkRayDirection) {
+            const behindKing = from - node.checkRayDirection;
+
+            if (behindKing < 64 && behindKing > -1) {
+                kingAttacks = kingAttacks.and(this.setMask[behindKing].not());
+            }
+        }
+
             if (
                 this.getPositionForAll(node.position.origin)
                     .and(this.isCastlingPossibleNow[color])
@@ -1424,7 +1432,8 @@ class ChessEngine implements IChessEngine {
 
         this.сalculateAttacksTo(node);
 
-        node.check = long.UZERO;
+        node.checkRay = long.UZERO;
+        node.checkRayDirection = undefined;
 
         const color = move.piece.color;
         const kingPosition: long =
@@ -1438,12 +1447,7 @@ class ChessEngine implements IChessEngine {
         const enemyAttacksToKing = node.attacksTo[index].and(enemyPosition);
 
         if (!enemyAttacksToKing.isZero()) {
-            node.check = this.сalculateCheck(
-                enemyAttacksToKing,
-                node.position.origin,
-                color,
-                index
-            );
+            this.сalculateCheckRay(enemyAttacksToKing, node, color, index);
         }
 
         return node.position.origin;
@@ -1489,19 +1493,20 @@ class ChessEngine implements IChessEngine {
         );
     }
 
-    private сalculateCheck(
+    private сalculateCheckRay(
         attacksToKing: long,
-        position: Position,
+        node: Node,
         color: 'white' | 'black',
         kingIndex: number
-    ): long {
+    ): void {
         if (
-            !position.pawn[color]
-                .or(position.knight[color])
+            !node.position.origin.pawn[color]
+                .or(node.position.origin.knight[color])
                 .and(attacksToKing)
                 .isZero()
         ) {
-            return attacksToKing;
+            this.node.checkRay = attacksToKing;
+            return;
         }
 
         for (let key in this.rays) {
@@ -1515,17 +1520,20 @@ class ChessEngine implements IChessEngine {
                     key as keyof typeof RayOfAttacks
                 ];
 
-                return kingRay
+                node.checkRayDirection =
+                    RayOfAttacks[key as keyof typeof RayOfAttacks];
+
+                node.checkRay = kingRay
                     .and(
                         this.rays[RayOfAttacks[counterRay] as keyof Rays][
                             attacksToKingIndex
                         ]
                     )
                     .or(this.setMask[attacksToKingIndex]);
+
+                return;
             }
         }
-
-        return long.UZERO;
     }
 
     public async getComputerMove(color: 'white' | 'black'): Promise<Move> {
@@ -1585,7 +1593,7 @@ class ChessEngine implements IChessEngine {
             return result;
         } else {
             //if move undefined pat or mat
-            return { alpha: node.check.isZero() ? 0 : PieceValue.checkmate };
+            return { alpha: node.checkRay.isZero() ? 0 : PieceValue.checkmate };
         }
     }
 
@@ -1785,7 +1793,7 @@ class ChessEngine implements IChessEngine {
     public checkGameOver(color: 'white' | 'black'): GameOverReason | undefined {
         const movesCount: number = this.getAllMoves(this.node, color).length;
 
-        if (!this.node.check.isZero() && movesCount === 0) {
+        if (!this.node.checkRay.isZero() && movesCount === 0) {
             return GameOverReason.checkmate;
         }
 
