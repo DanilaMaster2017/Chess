@@ -8,6 +8,7 @@ import { Move } from '../types/Move';
 import { convertToMove } from '../functions/convertToMove';
 import { cloneObject } from '../functions/cloneObject';
 import { GameOverReason } from '../types/GameOverReason';
+import { WhichRook } from '../types/WhichRook';
 
 interface PruningResult {
     alpha: number;
@@ -26,6 +27,7 @@ interface Node {
     attacksTo: long[];
     checkRay: long;
     checkRayDirection: RayOfAttacks | undefined;
+    isCastlingPossible: WhichRook;
     enPassant: number | undefined;
 }
 
@@ -114,8 +116,9 @@ class ChessEngine implements IChessEngine {
     private diagonalH1A8Attacks: long[][];
     private diagonalA1H8Attacks: long[][];
 
-    private isCastlingPossibleNow: Players;
-    private castlingRooksPosition: Players;
+    private isCastlingPossibleNow: WhichRook;
+    private rooksStartPosition: WhichRook;
+    private kingsStartPosition: Players;
 
     private movesWithoutCapturesCount: number;
     private pastPositions: Players;
@@ -265,8 +268,14 @@ class ChessEngine implements IChessEngine {
             checkRayDirection: undefined,
             attacksTo: [],
             isCastlingPossible: {
-                white: true,
-                black: true,
+                near: {
+                    white: true,
+                    black: true,
+                },
+                distant: {
+                    white: true,
+                    black: true,
+                },
             },
         };
 
@@ -355,13 +364,32 @@ class ChessEngine implements IChessEngine {
         }
 
         this.isCastlingPossibleNow = {
-            white: this.setMask[2].or(this.setMask[1]),
-            black: this.setMask[57].or(this.setMask[58]),
+            near: {
+                white: this.setMask[2].or(this.setMask[1]),
+                black: this.setMask[57].or(this.setMask[58]),
+            },
+            distant: {
+                white: this.setMask[4].or(this.setMask[5]).or(this.setMask[6]),
+                black: this.setMask[60]
+                    .or(this.setMask[61])
+                    .or(this.setMask[62]),
+            },
         };
 
-        this.castlingRooksPosition = {
-            white: 0,
-            black: 56,
+        this.rooksStartPosition = {
+            near: {
+                white: 0,
+                black: 56,
+            },
+            distant: {
+                white: 7,
+                black: 63,
+            },
+        };
+
+        this.kingsStartPosition = {
+            white: 3,
+            black: 59,
         };
 
         for (let i = 0; i < sideSize; i++) {
@@ -1161,24 +1189,47 @@ class ChessEngine implements IChessEngine {
             }
         }
 
-            if (
-                this.getPositionForAll(node.position.origin)
-                    .and(this.isCastlingPossibleNow[color])
-                    .isZero()
-            ) {
-                const from = color === 'white' ? 3 : 59;
-                let isNowhereAttacks = true;
+        const positionForAll: long = this.getPositionForAll(
+            node.position.origin
+        );
 
-                for (let i = from; i > from - 3; i--) {
-                    if (!node.attacksTo[i].and(notSelfPieces).isZero()) {
-                        isNowhereAttacks = false;
-                        break;
-                    }
-                }
+        if (
+            node.isCastlingPossible.near[color] &&
+            positionForAll.and(this.isCastlingPossibleNow.near[color]).isZero()
+        ) {
+            const from = this.kingsStartPosition[color];
+            let isNowhereAttacks = true;
 
-                if (isNowhereAttacks) {
-                    kingAttacks = kingAttacks.or(this.setMask[from - 2]);
+            for (let i = from; i > from - 3; i--) {
+                if (!node.attacksTo[i].and(notSelfPieces).isZero()) {
+                    isNowhereAttacks = false;
+                    break;
                 }
+            }
+
+            if (isNowhereAttacks) {
+                kingAttacks = kingAttacks.or(this.setMask[from - 2]);
+            }
+        }
+
+        if (
+            node.isCastlingPossible.distant[color] &&
+            positionForAll
+                .and(this.isCastlingPossibleNow.distant[color])
+                .isZero()
+        ) {
+            const from = this.kingsStartPosition[color];
+            let isNowhereAttacks = true;
+
+            for (let i = from; i < from + 3; i++) {
+                if (!node.attacksTo[i].and(notSelfPieces).isZero()) {
+                    isNowhereAttacks = false;
+                    break;
+                }
+            }
+
+            if (isNowhereAttacks) {
+                kingAttacks = kingAttacks.or(this.setMask[from + 2]);
             }
         }
 
@@ -1300,6 +1351,7 @@ class ChessEngine implements IChessEngine {
 
     public makeMove(move: Move, node?: Node): Position {
         const isGlobalNode = node ? false : true;
+        const enemyColor: 'white' | 'black' = enemy[move.piece.color];
 
         if (!node) {
             node = this.node;
@@ -1314,7 +1366,7 @@ class ChessEngine implements IChessEngine {
                 move.capturedPiece ||
                 move.piece.type === PieceType.pawn ||
                 (move.piece.type === PieceType.king &&
-                    move.from - move.to === 2)
+                    Math.abs(move.from - move.to) === 2)
             ) {
                 this.pastPositions = { white: [], black: [] };
             }
@@ -1353,7 +1405,7 @@ class ChessEngine implements IChessEngine {
             this.setPiece(move.piece, move.to, node.position);
 
             this.unsetPiece(
-                { type: PieceType.pawn, color: enemy[move.piece.color] },
+                { type: PieceType.pawn, color: enemyColor },
                 move.to + sign * sideSize,
                 node.position
             );
@@ -1374,30 +1426,62 @@ class ChessEngine implements IChessEngine {
             }
         }
 
-        if (
-            move.piece.type === PieceType.king ||
-            move.from === this.castlingRooksPosition[move.piece.color]
-        ) {
-            node.isCastlingPossible[move.piece.color] = false;
+        if (move.piece.type === PieceType.king) {
+            node.isCastlingPossible.near[move.piece.color] = false;
+            node.isCastlingPossible.distant[move.piece.color] = false;
+        }
+
+        if (move.from === this.rooksStartPosition.near[move.piece.color]) {
+            node.isCastlingPossible.near[move.piece.color] = false;
+        }
+
+        if (move.from === this.rooksStartPosition.distant[move.piece.color]) {
+            node.isCastlingPossible.distant[move.piece.color] = false;
+        }
+
+        if (move.to === this.rooksStartPosition.near[enemyColor]) {
+            node.isCastlingPossible.near[enemyColor] = false;
+        }
+
+        if (move.to === this.rooksStartPosition.distant[enemyColor]) {
+            node.isCastlingPossible.distant[enemyColor] = false;
         }
 
         //castling move for rook
-        if (move.piece.type === PieceType.king && move.from - move.to === 2) {
-            const castlingRook = {
-                type: PieceType.rook,
-                color: move.piece.color,
-            };
+        if (move.piece.type === PieceType.king) {
+            if (move.from - move.to === 2) {
+                const rook = {
+                    type: PieceType.rook,
+                    color: move.piece.color,
+                };
 
-            this.unsetPiece(
-                castlingRook,
-                this.castlingRooksPosition[castlingRook.color],
-                node.position
-            );
-            this.setPiece(
-                castlingRook,
-                this.castlingRooksPosition[castlingRook.color] + 2,
-                node.position
-            );
+                this.unsetPiece(
+                    rook,
+                    this.rooksStartPosition.near[rook.color],
+                    node.position
+                );
+                this.setPiece(
+                    rook,
+                    this.rooksStartPosition.near[rook.color] + 2,
+                    node.position
+                );
+            } else if (move.to - move.from === 2) {
+                const rook = {
+                    type: PieceType.rook,
+                    color: move.piece.color,
+                };
+
+                this.unsetPiece(
+                    rook,
+                    this.rooksStartPosition.distant[rook.color],
+                    node.position
+                );
+                this.setPiece(
+                    rook,
+                    this.rooksStartPosition.distant[rook.color] - 3,
+                    node.position
+                );
+            }
         }
 
         node.enPassant = undefined;

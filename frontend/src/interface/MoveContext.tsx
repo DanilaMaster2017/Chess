@@ -5,28 +5,34 @@ import React, {
     createContext,
     SetStateAction,
 } from 'react';
-import { Players } from '../types/Players';
+import { WhichRook } from '../types/WhichRook';
 
 interface IMoveContext {
-    onPieceMove: (top: string, left: string) => void;
-    setOnPieceMove: (f: (top: string, left: string) => void) => void;
-    castlingRooks: Players;
-    setCastlingRooks: (castlingRook: SetStateAction<Players>) => void;
+    onPieceMove: (x: number, y: number) => void;
+    setOnPieceMove: (f: (x: number, y: number) => void) => void;
+    rooks: WhichRook;
+    setRooks: (rook: SetStateAction<WhichRook>) => void;
     hoverSquare: number;
     setHoverSquare: (h: number) => void;
 }
 
-const defaultCastlingRooks = {
-    white: undefined,
-    black: undefined,
+const defaultRooks = {
+    near: {
+        white: undefined,
+        black: undefined,
+    },
+    distant: {
+        white: undefined,
+        black: undefined,
+    },
 };
 
 const MoveContextProvider = createContext<IMoveContext>({
-    onPieceMove: (top: string, left: string) => {},
-    setOnPieceMove: (f: (top: string, left: string) => void) => {},
-    castlingRooks: defaultCastlingRooks,
-    setCastlingRooks: () => {
-        return defaultCastlingRooks;
+    onPieceMove: (from: number, to: number) => {},
+    setOnPieceMove: (f: (from: number, to: number) => void) => {},
+    rooks: defaultRooks,
+    setRooks: () => {
+        return defaultRooks;
     },
     hoverSquare: -1,
     setHoverSquare: (n: number) => {},
@@ -38,14 +44,12 @@ export function useMoveContext() {
 
 export const MoveContext: FC = ({ children }) => {
     const [onPieceMove, setOnPieceMove] = useState<
-        (top: string, left: string) => void
+        (from: number, to: number) => void
     >(() => {
-        return (top: string, left: string) => {};
+        return (from: number, to: number) => {};
     });
 
-    const [castlingRooks, setCastlingRooks] = useState<Players>(
-        defaultCastlingRooks
-    );
+    const [rooks, setRooks] = useState<WhichRook>(defaultRooks);
 
     const [hoverSquare, setHoverSquare] = useState<number>(-1);
 
@@ -54,8 +58,8 @@ export const MoveContext: FC = ({ children }) => {
             value={{
                 onPieceMove,
                 setOnPieceMove,
-                castlingRooks,
-                setCastlingRooks,
+                rooks,
+                setRooks,
                 hoverSquare,
                 setHoverSquare,
             }}

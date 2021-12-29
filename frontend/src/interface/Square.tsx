@@ -11,11 +11,16 @@ import {
     animationTime,
     sideSize,
 } from '../constants/constants';
-import { Players } from '../types/Players';
+import { WhichRook } from '../types/WhichRook';
 import { PieceType } from '../types/PieceType';
 import { chessEngine } from '../сhessEngine/chessEngine';
 import { useBoardContext } from './BoardContext';
 import long from 'long';
+
+enum Rook {
+    distant = -1,
+    near = 1,
+}
 
 interface Props {
     isTracking: boolean;
@@ -64,8 +69,8 @@ export const Square: FC<Props> = ({
     const {
         onPieceMove,
         setOnPieceMove,
-        castlingRooks,
-        setCastlingRooks,
+        rooks,
+        setRooks,
         hoverSquare,
         setHoverSquare,
     } = useMoveContext();
@@ -91,13 +96,6 @@ export const Square: FC<Props> = ({
         (playerInfo.color === 'black' && !isReverse) ||
         (playerInfo.color === 'white' && isReverse);
 
-    const top = boardSide
-        ? boardOneEighth * y + '%'
-        : boardOneEighth * (sideSize - 1 - y) + '%';
-    const left = boardSide
-        ? boardOneEighth * x + '%'
-        : boardOneEighth * (sideSize - 1 - x) + '%';
-
     const resetBoard = () => {
         setTrack(long.ZERO);
         setActiveSquare(-1);
@@ -111,33 +109,132 @@ export const Square: FC<Props> = ({
     };
 
     useEffect(() => {
-        if (pieceImage.current) {
-            pieceImage.current!.style.left = left;
-            pieceImage.current!.style.top = top;
-        }
-    }, [left, top]);
-
-    useEffect(() => {
-        if (squareNumber === 0) {
-            setCastlingRooks((prev: Players) => {
-                return {
-                    white: pieceImage,
-                    black: prev.black,
-                };
-            });
-        } else if (squareNumber === 56) {
-            setCastlingRooks((prev: Players) => {
-                return {
-                    white: prev.white,
-                    black: pieceImage,
-                };
-            });
+        switch (squareNumber) {
+            case 0:
+                setRooks((prev: WhichRook) => {
+                    return {
+                        near: {
+                            white: pieceImage,
+                            black: prev.near.black,
+                        },
+                        distant: prev.distant,
+                    };
+                });
+                break;
+            case 7:
+                setRooks((prev: WhichRook) => {
+                    return {
+                        near: prev.near,
+                        distant: {
+                            white: pieceImage,
+                            black: prev.distant.black,
+                        },
+                    };
+                });
+                break;
+            case 56:
+                setRooks((prev: WhichRook) => {
+                    return {
+                        near: {
+                            white: prev.near.white,
+                            black: pieceImage,
+                        },
+                        distant: prev.distant,
+                    };
+                });
+                break;
+            case 63:
+                setRooks((prev: WhichRook) => {
+                    return {
+                        near: prev.near,
+                        distant: {
+                            white: prev.distant.white,
+                            black: pieceImage,
+                        },
+                    };
+                });
+                break;
         }
     }, []);
 
+    const getLeft = (x: number): string => {
+        return boardSide
+            ? boardOneEighth * x + '%'
+            : boardOneEighth * (sideSize - 1 - x) + '%';
+    };
+
+    const getTop = (y: number): string => {
+        return boardSide
+            ? boardOneEighth * y + '%'
+            : boardOneEighth * (sideSize - 1 - y) + '%';
+    };
+
     useEffect(() => {
-        if (pieceImage.current && piece?.color === playerInfo.color) {
-            if (whoseMove === 'player') {
+        if (pieceImage.current) {
+            pieceImage.current.style.left = getLeft(x);
+            pieceImage.current.style.top = getTop(y);
+        }
+    }, [boardSide]);
+
+    const makeMove = (
+        from: number,
+        to: number,
+        piece: Piece,
+        capturedPiece?: Piece
+    ) => {
+        if (piece.type === PieceType.pawn && (to < 8 || to > 55)) {
+            setOnPromote(() => {
+                return (promotedPiece: Piece) => {
+                    onMove({
+                        from,
+                        to,
+                        piece,
+                        capturedPiece,
+                        promotedPiece,
+                    });
+                };
+            });
+
+            setWhoseMove('nobodys');
+            setFileWherePromotion(to % sideSize);
+        } else {
+            onMove({
+                from,
+                to,
+                piece,
+                capturedPiece,
+            });
+        }
+    };
+
+    const animateMove = (
+        pieceImage: HTMLImageElement,
+        from: number,
+        to: number
+    ) => {
+        const x: number = to % sideSize;
+        const y: number = Math.floor(to / sideSize);
+
+        //for castling animate
+        if (piece?.type === PieceType.king && Math.abs(from - to) === 2) {
+            const rook: Rook = Math.floor((from - to) / 2);
+            const rookNewPosition = x + rook;
+
+            rooks[Rook[rook] as keyof WhichRook][
+                piece.color
+            ].current.style.left = getLeft(rookNewPosition);
+        }
+
+        pieceImage.style.zIndex = '2';
+
+        //for move animate
+        pieceImage.style.top = getTop(y);
+        pieceImage.style.left = getLeft(x);
+    };
+
+    useEffect(() => {
+        if (pieceImage.current) {
+            if (whoseMove === 'player' && piece!.color === playerInfo.color) {
                 pieceImage.current.onmousedown = (e) => {
                     let isSameSquare: boolean = true;
 
@@ -215,33 +312,7 @@ export const Square: FC<Props> = ({
                             }
 
                             const to: number = +hoverSquare.id;
-
-                            if (
-                                piece!.type === PieceType.pawn &&
-                                (to < 8 || to > 55)
-                            ) {
-                                setOnPromote(() => {
-                                    return (promotedPiece: Piece) => {
-                                        onMove({
-                                            from: squareNumber,
-                                            to,
-                                            piece: piece!,
-                                            capturedPiece,
-                                            promotedPiece,
-                                        });
-                                    };
-                                });
-
-                                setWhoseMove('nobodys');
-                                setFileWherePromotion(to % sideSize);
-                            } else {
-                                onMove({
-                                    from: squareNumber,
-                                    to,
-                                    piece: piece!,
-                                    capturedPiece,
-                                });
-                            }
+                            makeMove(squareNumber, to, piece!, capturedPiece);
 
                             resetBoard();
                             setLastMove(squareNumber, to);
@@ -278,29 +349,12 @@ export const Square: FC<Props> = ({
     useEffect(() => {
         if (activeSquare === squareNumber) {
             setOnPieceMove((prevState) => {
-                return (top: string, left: string) => {
-                    //for castling animate
-                    if (piece?.type === PieceType.king) {
-                        const kingPosition = parseFloat(
-                            pieceImage.current!.style.left
-                        );
-                        const kingNewPosition = parseFloat(left);
-
-                        if (Math.abs(kingPosition - kingNewPosition) === 25) {
-                            castlingRooks[piece.color].current.style.left =
-                                left === '75%' ? '62.5%' : '25%';
-                        }
-                    }
-
-                    pieceImage.current!.style.zIndex = '2';
-
-                    //for move animate
-                    pieceImage.current!.style.top = top;
-                    pieceImage.current!.style.left = left;
+                return (from: number, to: number) => {
+                    animateMove(pieceImage.current!, from, to);
                 };
             });
         }
-    }, [activeSquare, boardSide]);
+    }, [activeSquare]);
 
     useEffect(() => {
         if (pieceImage.current && enemyMove.to === squareNumber) {
@@ -313,30 +367,7 @@ export const Square: FC<Props> = ({
         }
 
         if (pieceImage.current && enemyMove.from === squareNumber) {
-            const x = enemyMove.to % sideSize;
-            const y = Math.floor(enemyMove.to / sideSize);
-
-            //for castling animate
-            if (
-                piece?.type === PieceType.king &&
-                enemyMove.from - enemyMove.to === 2
-            ) {
-                castlingRooks[piece.color].current.style.left =
-                    x === 6 ? '62.5%' : '25%';
-            }
-
-            const top = boardSide
-                ? boardOneEighth * y + '%'
-                : boardOneEighth * (sideSize - 1 - y) + '%';
-            const left = boardSide
-                ? boardOneEighth * x + '%'
-                : boardOneEighth * (sideSize - 1 - x) + '%';
-
-            pieceImage.current!.style.zIndex = '2';
-
-            //for move animate
-            pieceImage.current!.style.top = top;
-            pieceImage.current!.style.left = left;
+            animateMove(pieceImage.current, enemyMove.from, enemyMove.to);
 
             if (checkSquare !== undefined) {
                 setCheckSquare(undefined);
@@ -377,35 +408,10 @@ export const Square: FC<Props> = ({
             }
 
             setLastMove(activeSquare!, squareNumber);
-            onPieceMove(top, left);
+            onPieceMove(activeSquare!, squareNumber);
 
             setTimeout(() => {
-                if (
-                    activePiece!.type === PieceType.pawn &&
-                    (squareNumber < 8 || squareNumber > 55)
-                ) {
-                    setOnPromote(() => {
-                        return (promotedPiece: Piece) => {
-                            onMove({
-                                from: activeSquare!,
-                                to: squareNumber,
-                                piece: activePiece!,
-                                capturedPiece: piece,
-                                promotedPiece,
-                            });
-                        };
-                    });
-
-                    setWhoseMove('nobodys');
-                    setFileWherePromotion(squareNumber % sideSize);
-                } else {
-                    onMove({
-                        from: activeSquare!,
-                        to: squareNumber,
-                        piece: activePiece!,
-                        capturedPiece: piece,
-                    });
-                }
+                makeMove(activeSquare!, squareNumber, activePiece!, piece);
             }, animationTime + afterAnimationTime);
         };
     } else {
@@ -444,8 +450,8 @@ export const Square: FC<Props> = ({
                     css={css`
                         position: absolute;
                         z-index: 1;
-                        top: ${top};
-                        left: ${left};
+                        top: ${getTop(y)};
+                        left: ${getLeft(x)};
                         width: ${boardOneEighth}%;
                         transition: top ${animationTime}ms linear,
                             left ${animationTime}ms linear;
