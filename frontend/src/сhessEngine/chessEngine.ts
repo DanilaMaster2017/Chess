@@ -303,27 +303,27 @@ class ChessEngine implements IChessEngine {
                     .and(
                         piecePosition
                             .shiftLeft(6)
-                            .or(piecePosition.shiftRight(10))
+                            .or(piecePosition.shiftRightUnsigned(10))
                     )
                     .or(
                         notH.and(
                             piecePosition
                                 .shiftLeft(15)
-                                .or(piecePosition.shiftRight(17))
+                                .or(piecePosition.shiftRightUnsigned(17))
                         )
                     )
                     .or(
                         notA.and(
                             piecePosition
                                 .shiftLeft(17)
-                                .or(piecePosition.shiftRight(15))
+                                .or(piecePosition.shiftRightUnsigned(15))
                         )
                     )
                     .or(
                         notAB.and(
                             piecePosition
                                 .shiftLeft(10)
-                                .or(piecePosition.shiftRight(6))
+                                .or(piecePosition.shiftRightUnsigned(6))
                         )
                     )
                     .toUnsigned()
