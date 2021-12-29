@@ -13,6 +13,7 @@ import { Move } from '../types/Move';
 import { afterAnimationTime, animationTime } from '../constants/constants';
 import { getPieceImage } from '../functions/getPieceImage';
 import { useBoardContext } from './BoardContext';
+import { GameOverReason } from '../types/GameOverReason';
 
 export const ComputerGamePage: FC = () => {
     const [position, setPosition] = useState<Position>(chessEngine.position);
@@ -95,8 +96,8 @@ export const ComputerGamePage: FC = () => {
                     enemyInfo.color
                 );
 
-                if (gameOverReason) {
-                    console.log(gameOverReason);
+                if (gameOverReason !== undefined) {
+                    console.log(GameOverReason[gameOverReason]);
                     setWhoseMove('nobodys');
                 } else {
                     setWhoseMove('enemy');
@@ -134,8 +135,8 @@ export const ComputerGamePage: FC = () => {
                         playerInfo.color
                     );
 
-                    if (gameOverReason) {
-                        console.log(gameOverReason);
+                    if (gameOverReason !== undefined) {
+                        console.log(GameOverReason[gameOverReason]);
                         setWhoseMove('nobodys');
                     } else {
                         setWhoseMove('player');

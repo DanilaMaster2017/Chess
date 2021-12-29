@@ -7,6 +7,7 @@ import { PieceType } from '../types/PieceType';
 import { Move } from '../types/Move';
 import { convertToMove } from '../functions/convertToMove';
 import { cloneObject } from '../functions/cloneObject';
+import { GameOverReason } from '../types/GameOverReason';
 
 interface PruningResult {
     alpha: number;
@@ -42,18 +43,6 @@ interface IChessEngine {
     makeMove: (move: Move, node?: Node) => Position;
     isCheck: (index: number, color: 'white' | 'black') => boolean;
     checkGameOver: (color: 'white' | 'black') => GameOverReason | undefined;
-}
-
-enum GameOverReason {
-    checkmate,
-    resigning,
-    timeoutWin,
-    timeoutDraw,
-    stalemate,
-    deadPosition,
-    agreeDrawAfterOffer,
-    fiftyMoveRule,
-    threeFoldRepetitionRule,
 }
 
 enum DirectionOfAttacks {
@@ -1888,14 +1877,14 @@ class ChessEngine implements IChessEngine {
     ): boolean {
         for (let key in position1) {
             if (
-                (position1[key as keyof Position]['white'] as long).equals(
+                (position1[key as keyof Position]['white'] as long).notEquals(
                     position2[key as keyof Position]['white']
                 )
             )
                 return false;
 
             if (
-                (position1[key as keyof Position]['black'] as long).equals(
+                (position1[key as keyof Position]['black'] as long).notEquals(
                     position2[key as keyof Position]['black']
                 )
             )
