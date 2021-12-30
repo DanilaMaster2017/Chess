@@ -15,25 +15,27 @@ export const CapturedPieces: FC<Props> = ({ capturedPieces }) => {
         const pieceImages: ReactElement[] = [];
 
         capturedPieces.forEach((count, piece) => {
-            pieceImages.push(
-                <span
-                    css={css`
-                        position: relative;
-                        margin-right: 8px;
-                    `}
-                    key={piece}
-                >
-                    <img
+            if (count) {
+                pieceImages.push(
+                    <span
                         css={css`
-                            width: ${imgSize};
-                            height: ${imgSize};
+                            position: relative;
+                            margin-right: 8px;
                         `}
-                        src={piece}
-                        alt=""
-                    ></img>
-                    {count > 1 && <CountLabel count={count}></CountLabel>}
-                </span>
-            );
+                        key={piece}
+                    >
+                        <img
+                            css={css`
+                                width: ${imgSize};
+                                height: ${imgSize};
+                            `}
+                            src={piece}
+                            alt=""
+                        ></img>
+                        {count > 1 && <CountLabel count={count}></CountLabel>}
+                    </span>
+                );
+            }
         });
 
         return pieceImages;

@@ -14,6 +14,7 @@ import { afterAnimationTime, animationTime } from '../constants/constants';
 import { getPieceImage } from '../functions/getPieceImage';
 import { useBoardContext } from './BoardContext';
 import { GameOverReason } from '../types/GameOverReason';
+import { PieceType } from '../types/PieceType';
 
 export const ComputerGamePage: FC = () => {
     const [position, setPosition] = useState<Position>(chessEngine.position);
@@ -35,6 +36,51 @@ export const ComputerGamePage: FC = () => {
         playerInfo,
         enemyInfo,
     } = useGameInfoContext();
+
+    const setCapturedPices = (
+        setState: (v: Map<string, number>) => void,
+        color: 'white' | 'black'
+    ): void => {
+        setState(
+            new Map([
+                [
+                    getPieceImage({
+                        color: color,
+                        type: PieceType.queen,
+                    }),
+                    0,
+                ],
+                [
+                    getPieceImage({
+                        color: color,
+                        type: PieceType.rook,
+                    }),
+                    0,
+                ],
+                [
+                    getPieceImage({
+                        color: color,
+                        type: PieceType.bishop,
+                    }),
+                    0,
+                ],
+                [
+                    getPieceImage({
+                        color: color,
+                        type: PieceType.knight,
+                    }),
+                    0,
+                ],
+                [
+                    getPieceImage({
+                        color: color,
+                        type: PieceType.pawn,
+                    }),
+                    0,
+                ],
+            ])
+        );
+    };
 
     useEffect(() => {
         let playerColor: 'white' | 'black';
@@ -62,6 +108,9 @@ export const ComputerGamePage: FC = () => {
             computerLevel: level,
         });
 
+        setCapturedPices(setPlayerCapturedPieces, enemyColor);
+        setCapturedPices(setEnemyCapturedPieces, playerColor);
+
         if (getTimeForGame() !== Infinity) {
             const timeLeft = new Date(0, 0);
 
@@ -83,11 +132,7 @@ export const ComputerGamePage: FC = () => {
                     const map = new Map(playerCapturedPieces);
                     const pieceImageSrc = getPieceImage(move.capturedPiece);
 
-                    if (map.has(pieceImageSrc)) {
-                        map.set(pieceImageSrc, map.get(pieceImageSrc)! + 1);
-                    } else {
-                        map.set(pieceImageSrc, 1);
-                    }
+                    map.set(pieceImageSrc, map.get(pieceImageSrc)! + 1);
 
                     setPlayerCapturedPieces(map);
                 }
@@ -122,11 +167,7 @@ export const ComputerGamePage: FC = () => {
                         const map = new Map(enemyCapturedPieces);
                         const pieceImageSrc = getPieceImage(move.capturedPiece);
 
-                        if (map.has(pieceImageSrc)) {
-                            map.set(pieceImageSrc, map.get(pieceImageSrc)! + 1);
-                        } else {
-                            map.set(pieceImageSrc, 1);
-                        }
+                        map.set(pieceImageSrc, map.get(pieceImageSrc)! + 1);
 
                         setEnemyCapturedPieces(map);
                     }

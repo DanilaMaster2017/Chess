@@ -48,7 +48,7 @@ export const GameInfo: FC<Props> = ({ person }) => {
             `}
         >
             <UserInfo {...personInfo}></UserInfo>
-            {!!capturedPieces.size && (
+            {Array.from(capturedPieces.values()).some((item) => item) && (
                 <CapturedPieces
                     capturedPieces={capturedPieces}
                 ></CapturedPieces>
