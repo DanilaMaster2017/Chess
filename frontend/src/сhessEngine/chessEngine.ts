@@ -1268,16 +1268,14 @@ class ChessEngine implements IChessEngine {
                     );
 
                 if (
-                    this.getOneCount(
-                        bishopAttacksFromCurrent.and(bishopsAttackingPiece)
-                    ) === 1
+                    !bishopAttacksFromCurrent
+                        .and(bishopsAttackingPiece)
+                        .isZero() &&
+                    !bishopAttacksFromCurrent
+                        .and(node.position.origin.king[color])
+                        .isZero()
                 ) {
-                    if (
-                        !bishopAttacksFromCurrent
-                            .and(node.position.origin.king[color])
-                            .isZero()
-                    )
-                        return DirectionOfAttacks.diagonalA1H8;
+                    return DirectionOfAttacks.diagonalA1H8;
                 }
 
                 bishopAttacksFromCurrent =
@@ -1288,16 +1286,14 @@ class ChessEngine implements IChessEngine {
                     );
 
                 if (
-                    this.getOneCount(
-                        bishopAttacksFromCurrent.and(bishopsAttackingPiece)
-                    ) === 1
+                    !bishopAttacksFromCurrent
+                        .and(bishopsAttackingPiece)
+                        .isZero() &&
+                    !bishopAttacksFromCurrent
+                        .and(node.position.origin.king[color])
+                        .isZero()
                 ) {
-                    if (
-                        !bishopAttacksFromCurrent
-                            .and(node.position.origin.king[color])
-                            .isZero()
-                    )
-                        return DirectionOfAttacks.diagonalH1A8;
+                    return DirectionOfAttacks.diagonalH1A8;
                 }
             }
 
@@ -1315,16 +1311,12 @@ class ChessEngine implements IChessEngine {
                     this.getHorizontalAttacks(from, node.position.origin);
 
                 if (
-                    this.getOneCount(
-                        rookAttacksFromCurrent.and(rooksAttackingPiece)
-                    ) === 1
+                    !rookAttacksFromCurrent.and(rooksAttackingPiece).isZero() &&
+                    !rookAttacksFromCurrent
+                        .and(node.position.origin.king[color])
+                        .isZero()
                 ) {
-                    if (
-                        !rookAttacksFromCurrent
-                            .and(node.position.origin.king[color])
-                            .isZero()
-                    )
-                        return DirectionOfAttacks.horizontal;
+                    return DirectionOfAttacks.horizontal;
                 }
 
                 rookAttacksFromCurrent =
@@ -1332,16 +1324,12 @@ class ChessEngine implements IChessEngine {
                     this.getVerticalAttacks(from, node.position.rotatedLeft90);
 
                 if (
-                    this.getOneCount(
-                        rookAttacksFromCurrent.and(rooksAttackingPiece)
-                    ) === 1
+                    !rookAttacksFromCurrent.and(rooksAttackingPiece).isZero() &&
+                    !rookAttacksFromCurrent
+                        .and(node.position.origin.king[color])
+                        .isZero()
                 ) {
-                    if (
-                        !rookAttacksFromCurrent
-                            .and(node.position.origin.king[color])
-                            .isZero()
-                    )
-                        return DirectionOfAttacks.vertical;
+                    return DirectionOfAttacks.vertical;
                 }
             }
         }
@@ -1621,7 +1609,7 @@ class ChessEngine implements IChessEngine {
     }
 
     public async getComputerMove(color: 'white' | 'black'): Promise<Move> {
-        const move: Move = this.makeAlphaBetaPruning(this.node, color, 1).move!;
+        const move: Move = this.makeAlphaBetaPruning(this.node, color, 2).move!;
 
         return move;
     }
