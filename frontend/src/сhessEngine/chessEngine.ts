@@ -1144,9 +1144,9 @@ class ChessEngine implements IChessEngine {
                 break;
             default:
                 queenAttacks = horizontalAttacks
-            .or(verticalAttacks)
-            .or(a1H8Attacks)
-            .or(h1A8Attacks);
+                    .or(verticalAttacks)
+                    .or(a1H8Attacks)
+                    .or(h1A8Attacks);
                 break;
         }
 
@@ -1629,42 +1629,76 @@ class ChessEngine implements IChessEngine {
     }
 
     public async getComputerMove(color: 'white' | 'black'): Promise<Move> {
-        const move: Move = this.makeAlphaBetaPruning(this.node, color, 2).move!;
-
-        return move;
+        return this.makeAlphaBetaPruning(this.node, color, 1, 2).move!;
     }
 
     private makeAlphaBetaPruning(
         node: Node,
         color: 'white' | 'black',
         depth: number,
+        captureDepth: number,
         beta?: number
     ): PruningResult {
+        if (depth < -captureDepth) {
+            return { alpha: Number.POSITIVE_INFINITY };
+        }
+
         let result: PruningResult | undefined;
-        const moves = this.getAllMoves(node, color);
+        const moves = this.getAllMoves(node, color, depth < 0);
+
+        if (moves.length === 0) {
+            if (depth < 0) {
+                return {
+                    alpha: Number.POSITIVE_INFINITY,
+                };
+            } else {
+                //if pat or mat
+                return {
+                    alpha: node.checkRay.isZero() ? 0 : PieceValue.checkmate,
+                };
+            }
+        }
 
         for (let i = 0; i < moves.length; i++) {
             const move = convertToMove(moves[i], color);
             let currentResult: PruningResult = {
-                move: move,
                 alpha: 0,
             };
 
             const nextNode = cloneObject(node) as Node;
             this.makeMove(move, nextNode);
 
-            if (depth) {
-                currentResult = this.makeAlphaBetaPruning(
+            currentResult = this.makeAlphaBetaPruning(
+                nextNode,
+                enemy[color],
+                depth - 1,
+                captureDepth,
+                result !== undefined ? -result.alpha : undefined
+            );
+
+            if (depth < 1) {
+                let alpha: number;
+
+                const movesCount: number = this.getMovesCount(
                     nextNode,
-                    enemy[color],
-                    depth - 1,
-                    result !== undefined ? -result.alpha : undefined
+                    enemy[color]
                 );
-            } else {
-                currentResult.alpha =
-                    nextNode.score +
-                    this.getMovesCount(nextNode, color) -
-                    this.getMovesCount(nextNode, enemy[color]);
+
+                if (movesCount) {
+                    alpha =
+                        nextNode.score -
+                        movesCount +
+                        this.getMovesCount(nextNode, color);
+                } else {
+                    //if pat or mat
+                    alpha = nextNode.checkRay.isZero()
+                        ? 0
+                        : PieceValue.checkmate;
+                }
+
+                if (alpha < currentResult.alpha) {
+                    currentResult.alpha = alpha;
+                }
             }
 
             //the move of this level, not the next level(after calling this.makeAlphaBetaPruning)
@@ -1680,13 +1714,8 @@ class ChessEngine implements IChessEngine {
             }
         }
 
-        if (result) {
-            result.alpha = -result.alpha;
-            return result;
-        } else {
-            //if move undefined pat or mat
-            return { alpha: node.checkRay.isZero() ? 0 : PieceValue.checkmate };
-        }
+        result!.alpha = -result!.alpha;
+        return result!;
     }
 
     private getMovesCount(node: Node, color: 'white' | 'black'): number {
@@ -1734,15 +1763,18 @@ class ChessEngine implements IChessEngine {
         return count;
     }
 
-    private getAllMoves(node: Node, color: 'white' | 'black'): number[] {
-        const allMoves: number[] = [];
+    private getAllMoves(
+        node: Node,
+        color: 'white' | 'black',
+        isOnlyCapture: boolean
+    ): number[] {
+        let allMoves: number[] = [];
 
-        for (let key in PieceType) {
-            const pieceType: PieceType = Number(key);
-            if (isNaN(pieceType)) continue;
+        for (let key in node.position.origin) {
+            const piece: PieceType = PieceType[key as keyof typeof PieceType];
 
             let picesOfSomeType: long = node.position.origin[
-                PieceType[pieceType] as keyof Position
+                key as keyof Position
             ][color] as long;
 
             while (!picesOfSomeType.isZero()) {
@@ -1751,45 +1783,36 @@ class ChessEngine implements IChessEngine {
                 let moves: long = this.getPossibleMoves(
                     from,
                     {
-                        type: pieceType,
+                        type: piece,
                         color: color,
                     },
                     node
                 );
 
-                while (!moves.isZero()) {
-                    const to = squaresCount - moves.getNumBitsAbs();
-                    let move = from + (to << 6) + (pieceType << 12);
+                for (let key in node.position.origin) {
+                    let capturedPicesOfSomeType = moves.and(
+                        node.position.origin[key as keyof Position][
+                            enemy[color] as 'white' | 'black'
+                        ] as long
+                    );
 
-                    for (let key in PieceType) {
-                        const pieceType: PieceType = Number(key);
-                        if (isNaN(pieceType)) continue;
+                    moves = moves.and(capturedPicesOfSomeType.not());
 
-                        let enemyPicesOfSomeType: long = node.position.origin[
-                            PieceType[pieceType] as keyof Position
-                        ][enemy[color] as 'white' | 'black'] as long;
+                    allMoves = allMoves.concat(
+                        this.getMovesFromBitboard(
+                            capturedPicesOfSomeType,
+                            from,
+                            color,
+                            piece,
+                            PieceType[key as keyof typeof PieceType]
+                        )
+                    );
+                }
 
-                        if (
-                            !enemyPicesOfSomeType.and(this.setMask[to]).isZero()
-                        ) {
-                            move += pieceType << 15;
-                        }
-                    }
-
-                    if (
-                        pieceType === PieceType.pawn &&
-                        ((color === 'white' && to > 55) ||
-                            (color === 'black' && to < 8))
-                    ) {
-                        allMoves.push(move + (PieceType.bishop << 18));
-                        allMoves.push(move + (PieceType.queen << 18));
-                        allMoves.push(move + (PieceType.knight << 18));
-                        allMoves.push(move + (PieceType.rook << 18));
-                    } else {
-                        allMoves.push(move);
-                    }
-
-                    moves = moves.and(this.setMask[to].not());
+                if (!isOnlyCapture) {
+                    allMoves = allMoves.concat(
+                        this.getMovesFromBitboard(moves, from, color, piece)
+                    );
                 }
 
                 picesOfSomeType = picesOfSomeType.and(this.setMask[from].not());
@@ -1797,6 +1820,42 @@ class ChessEngine implements IChessEngine {
         }
 
         return allMoves;
+    }
+
+    private getMovesFromBitboard(
+        bitboard: long,
+        from: number,
+        color: 'white' | 'black',
+        piece: PieceType,
+        capturedPiece?: PieceType
+    ): number[] {
+        const moves: number[] = [];
+
+        while (!bitboard.isZero()) {
+            const to = squaresCount - bitboard.getNumBitsAbs();
+            let move = from + (to << 6) + (piece << 12);
+
+            if (capturedPiece) {
+                move += capturedPiece << 15;
+            }
+
+            if (
+                piece === PieceType.pawn &&
+                ((color === 'white' && to > 55) ||
+                    (color === 'black' && to < 8))
+            ) {
+                moves.push(move + (PieceType.bishop << 18));
+                moves.push(move + (PieceType.queen << 18));
+                moves.push(move + (PieceType.knight << 18));
+                moves.push(move + (PieceType.rook << 18));
+            } else {
+                moves.push(move);
+            }
+
+            bitboard = bitboard.and(this.setMask[to].not());
+        }
+
+        return moves;
     }
 
     private сalculateAttacksTo(node: Node): void {
@@ -1883,7 +1942,8 @@ class ChessEngine implements IChessEngine {
     }
 
     public checkGameOver(color: 'white' | 'black'): GameOverReason | undefined {
-        const movesCount: number = this.getAllMoves(this.node, color).length;
+        const movesCount: number = this.getAllMoves(this.node, color, false)
+            .length;
 
         if (!this.node.checkRay.isZero() && movesCount === 0) {
             return GameOverReason.checkmate;
