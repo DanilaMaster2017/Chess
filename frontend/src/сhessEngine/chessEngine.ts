@@ -25,6 +25,7 @@ interface Node {
     position: AllPosition;
     score: number;
     attacksTo: long[];
+    isDoubleCheck: boolean;
     checkRay: long;
     checkRayDirection: RayOfAttacks | undefined;
     isCastlingPossible: WhichRook;
@@ -264,6 +265,7 @@ class ChessEngine implements IChessEngine {
             },
             score: 0,
             enPassant: undefined,
+            isDoubleCheck: false,
             checkRay: long.UZERO,
             checkRayDirection: undefined,
             attacksTo: [],
@@ -392,27 +394,7 @@ class ChessEngine implements IChessEngine {
             black: 59,
         };
 
-        for (let i = 0; i < sideSize; i++) {
-            this.pawnsMoves.black.moves[i] = long.UZERO;
-            this.pawnsMoves.white.moves[i] = long.UZERO;
-
-            this.pawnsMoves.black.attacks[i] = long.UZERO;
-            this.pawnsMoves.white.attacks[i] = long.UZERO;
-
-            this.pawnsMoves.black.passes[i] = long.UZERO;
-            this.pawnsMoves.white.passes[i] = long.UZERO;
-
-            this.pawnsMoves.black.moves[squaresCount - 1 - i] = long.UZERO;
-            this.pawnsMoves.white.moves[squaresCount - 1 - i] = long.UZERO;
-
-            this.pawnsMoves.black.attacks[squaresCount - 1 - i] = long.UZERO;
-            this.pawnsMoves.white.attacks[squaresCount - 1 - i] = long.UZERO;
-
-            this.pawnsMoves.black.passes[squaresCount - 1 - i] = long.UZERO;
-            this.pawnsMoves.white.passes[squaresCount - 1 - i] = long.UZERO;
-        }
-
-        for (let i = sideSize; i < squaresCount - sideSize; i++) {
+        for (let i = 0; i < squaresCount; i++) {
             const piecePosition = long.UONE.shiftLeft(squaresCount - 1 - i);
 
             this.pawnsMoves.black.moves[i] = piecePosition.shiftLeft(sideSize);
@@ -908,6 +890,8 @@ class ChessEngine implements IChessEngine {
         color: 'white' | 'black',
         node: Node
     ): long {
+        if (node.isDoubleCheck) return long.ZERO;
+
         const myPosition = this.getPosition(node.position.origin, color);
         let enemyPosition = this.getPosition(
             node.position.origin,
@@ -944,28 +928,33 @@ class ChessEngine implements IChessEngine {
             node
         );
 
+        let pawnMovesResult: long;
         switch (directionOfAttacks) {
             case DirectionOfAttacks.horizontal:
                 return long.ZERO;
             case DirectionOfAttacks.vertical:
-                return pawnMove;
-
+                pawnMovesResult = pawnMove;
+                break;
             case DirectionOfAttacks.diagonalH1A8:
-                return pawnAttacks.and(
+                pawnMovesResult = pawnAttacks.and(
                     this.setMask[from + sign * (sideSize - 1)].not()
                 );
-
+                break;
             case DirectionOfAttacks.diagonalA1H8:
-                return pawnAttacks.and(
+                pawnMovesResult = pawnAttacks.and(
                     this.setMask[from + sign * (sideSize + 1)].not()
                 );
+                break;
+            default:
+                pawnMovesResult = pawnMove.or(pawnAttacks);
+                break;
         }
 
         if (!node.checkRay.isZero()) {
-            return pawnMove.or(pawnAttacks).and(node.checkRay);
+            return pawnMovesResult.and(node.checkRay);
         }
 
-        return pawnMove.or(pawnAttacks);
+        return pawnMovesResult;
     }
 
     private getKnightAttacks(
@@ -973,6 +962,8 @@ class ChessEngine implements IChessEngine {
         color: 'white' | 'black',
         node: Node
     ): long {
+        if (node.isDoubleCheck) return long.ZERO;
+
         const notSelfPieces: long = this.getPosition(
             node.position.origin,
             color
@@ -994,6 +985,8 @@ class ChessEngine implements IChessEngine {
         color: 'white' | 'black',
         node: Node
     ): long {
+        if (node.isDoubleCheck) return long.ZERO;
+
         const notSelfPieces: long = this.getPosition(
             node.position.origin,
             color
@@ -1017,17 +1010,21 @@ class ChessEngine implements IChessEngine {
             verticalAttacks
         );
 
+        let rookAttacks: long;
         switch (directionOfAttacks) {
             case DirectionOfAttacks.horizontal:
-                return horizontalAttacks.and(notSelfPieces);
+                rookAttacks = horizontalAttacks;
+                break;
             case DirectionOfAttacks.vertical:
-                return verticalAttacks.and(notSelfPieces);
+                rookAttacks = verticalAttacks;
+                break;
             case DirectionOfAttacks.diagonalH1A8:
             case DirectionOfAttacks.diagonalA1H8:
                 return long.ZERO;
+            default:
+                rookAttacks = horizontalAttacks.or(verticalAttacks);
+                break;
         }
-
-        const rookAttacks = horizontalAttacks.or(verticalAttacks);
 
         if (!node.checkRay.isZero()) {
             return rookAttacks.and(node.checkRay);
@@ -1041,6 +1038,8 @@ class ChessEngine implements IChessEngine {
         color: 'white' | 'black',
         node: Node
     ): long {
+        if (node.isDoubleCheck) return long.ZERO;
+
         const notSelfPieces: long = this.getPosition(
             node.position.origin,
             color
@@ -1066,17 +1065,21 @@ class ChessEngine implements IChessEngine {
             h1A8Attacks
         );
 
+        let bishopAttacks: long;
         switch (directionOfAttacks) {
             case DirectionOfAttacks.diagonalA1H8:
-                return a1H8Attacks.and(notSelfPieces);
+                bishopAttacks = a1H8Attacks;
+                break;
             case DirectionOfAttacks.diagonalH1A8:
-                return h1A8Attacks.and(notSelfPieces);
+                bishopAttacks = h1A8Attacks;
+                break;
             case DirectionOfAttacks.horizontal:
             case DirectionOfAttacks.vertical:
                 return long.ZERO;
+            default:
+                bishopAttacks = a1H8Attacks.or(h1A8Attacks);
+                break;
         }
-
-        const bishopAttacks = a1H8Attacks.or(h1A8Attacks);
 
         if (!node.checkRay.isZero()) {
             return bishopAttacks.and(node.checkRay);
@@ -1090,6 +1093,8 @@ class ChessEngine implements IChessEngine {
         color: 'white' | 'black',
         node: Node
     ): long {
+        if (node.isDoubleCheck) return long.ZERO;
+
         const notSelfPieces: long = this.getPosition(
             node.position.origin,
             color
@@ -1123,21 +1128,27 @@ class ChessEngine implements IChessEngine {
             h1A8Attacks
         );
 
+        let queenAttacks: long;
         switch (directionOfAttacks) {
             case DirectionOfAttacks.horizontal:
-                return horizontalAttacks.and(notSelfPieces);
+                queenAttacks = horizontalAttacks;
+                break;
             case DirectionOfAttacks.vertical:
-                return verticalAttacks.and(notSelfPieces);
+                queenAttacks = verticalAttacks;
+                break;
             case DirectionOfAttacks.diagonalA1H8:
-                return a1H8Attacks.and(notSelfPieces);
+                queenAttacks = a1H8Attacks;
+                break;
             case DirectionOfAttacks.diagonalH1A8:
-                return h1A8Attacks.and(notSelfPieces);
-        }
-
-        const queenAttacks = horizontalAttacks
+                queenAttacks = h1A8Attacks;
+                break;
+            default:
+                queenAttacks = horizontalAttacks
             .or(verticalAttacks)
             .or(a1H8Attacks)
             .or(h1A8Attacks);
+                break;
+        }
 
         if (!node.checkRay.isZero()) {
             return queenAttacks.and(node.checkRay);
@@ -1339,27 +1350,10 @@ class ChessEngine implements IChessEngine {
 
     public makeMove(move: Move, node?: Node): Position {
         const isGlobalNode = node ? false : true;
+        node = node ?? this.node;
+
+        const color = move.piece.color;
         const enemyColor: 'white' | 'black' = enemy[move.piece.color];
-
-        if (!node) {
-            node = this.node;
-
-            if (move.capturedPiece || move.piece.type === PieceType.pawn) {
-                this.movesWithoutCapturesCount = 0;
-            } else {
-                this.movesWithoutCapturesCount++;
-            }
-
-            if (
-                move.capturedPiece ||
-                move.piece.type === PieceType.pawn ||
-                (move.piece.type === PieceType.king &&
-                    Math.abs(move.from - move.to) === 2)
-            ) {
-                this.pastPositions = { white: [], black: [] };
-            }
-        }
-
         const sign = move.piece.color === 'white' ? 1 : -1;
 
         node.score *= -1;
@@ -1394,7 +1388,7 @@ class ChessEngine implements IChessEngine {
 
             this.unsetPiece(
                 { type: PieceType.pawn, color: enemyColor },
-                move.to + sign * sideSize,
+                move.to - sign * sideSize,
                 node.position
             );
         } else {
@@ -1415,16 +1409,16 @@ class ChessEngine implements IChessEngine {
         }
 
         if (move.piece.type === PieceType.king) {
-            node.isCastlingPossible.near[move.piece.color] = false;
-            node.isCastlingPossible.distant[move.piece.color] = false;
+            node.isCastlingPossible.near[color] = false;
+            node.isCastlingPossible.distant[color] = false;
         }
 
-        if (move.from === this.rooksStartPosition.near[move.piece.color]) {
-            node.isCastlingPossible.near[move.piece.color] = false;
+        if (move.from === this.rooksStartPosition.near[color]) {
+            node.isCastlingPossible.near[color] = false;
         }
 
-        if (move.from === this.rooksStartPosition.distant[move.piece.color]) {
-            node.isCastlingPossible.distant[move.piece.color] = false;
+        if (move.from === this.rooksStartPosition.distant[color]) {
+            node.isCastlingPossible.distant[color] = false;
         }
 
         if (move.to === this.rooksStartPosition.near[enemyColor]) {
@@ -1440,7 +1434,7 @@ class ChessEngine implements IChessEngine {
             if (move.from - move.to === 2) {
                 const rook = {
                     type: PieceType.rook,
-                    color: move.piece.color,
+                    color,
                 };
 
                 this.unsetPiece(
@@ -1456,7 +1450,7 @@ class ChessEngine implements IChessEngine {
             } else if (move.to - move.from === 2) {
                 const rook = {
                     type: PieceType.rook,
-                    color: move.piece.color,
+                    color,
                 };
 
                 this.unsetPiece(
@@ -1481,11 +1475,24 @@ class ChessEngine implements IChessEngine {
             node.enPassant = move.to - sign * sideSize;
         }
 
-        //for threefold repetition rule
         if (isGlobalNode) {
-            const color: 'white' | 'black' = move.piece.color;
+            if (move.capturedPiece || move.piece.type === PieceType.pawn) {
+                this.movesWithoutCapturesCount = 0;
+            } else {
+                this.movesWithoutCapturesCount++;
+            }
 
-            this.pastPositions[enemy[color] as 'white' | 'black'].push(
+            //for threefold repetition rule
+            if (
+                move.capturedPiece ||
+                move.piece.type === PieceType.pawn ||
+                (move.piece.type === PieceType.king &&
+                    Math.abs(move.from - move.to) === 2)
+            ) {
+                this.pastPositions = { white: [], black: [] };
+            }
+
+            this.pastPositions[enemyColor].push(
                 cloneObject(node.position.origin) as Position
             );
 
@@ -1493,7 +1500,7 @@ class ChessEngine implements IChessEngine {
                 const possibleEnPassant = (this.pawnsMoves[
                     color
                 ] as PawnsMoves).attacks[node.enPassant].and(
-                    node.position.origin.pawn[enemy[color] as 'white' | 'black']
+                    node.position.origin.pawn[enemyColor]
                 );
 
                 if (!possibleEnPassant.isZero()) {
@@ -1504,22 +1511,35 @@ class ChessEngine implements IChessEngine {
 
         this.сalculateAttacksTo(node);
 
+        node.isDoubleCheck = false;
         node.checkRay = long.UZERO;
         node.checkRayDirection = undefined;
 
-        const color = move.piece.color;
-        const kingPosition: long =
-            node.position.origin.king[enemy[color] as 'white' | 'black'];
-        const index = squaresCount - kingPosition.getNumBitsAbs();
+        const kingPosition: long = node.position.origin.king[enemyColor];
+        const kingIndex = squaresCount - kingPosition.getNumBitsAbs();
 
         const enemyPosition: long = this.getPosition(
             node.position.origin,
             color
         );
-        const enemyAttacksToKing = node.attacksTo[index].and(enemyPosition);
+        const enemyAttacksToKing = node.attacksTo[kingIndex].and(enemyPosition);
 
         if (!enemyAttacksToKing.isZero()) {
-            this.сalculateCheckRay(enemyAttacksToKing, node, color, index);
+            const enemyIndex =
+                squaresCount - enemyAttacksToKing.getNumBitsAbs();
+
+            node.isDoubleCheck = !enemyAttacksToKing
+                .and(this.setMask[enemyIndex].not())
+                .isZero();
+
+            if (!node.isDoubleCheck) {
+                this.сalculateCheckRay(
+                    enemyAttacksToKing,
+                    node,
+                    color,
+                    kingIndex
+                );
+            }
         }
 
         return node.position.origin;
@@ -1577,7 +1597,7 @@ class ChessEngine implements IChessEngine {
                 .and(attacksToKing)
                 .isZero()
         ) {
-            this.node.checkRay = attacksToKing;
+            node.checkRay = attacksToKing;
             return;
         }
 
